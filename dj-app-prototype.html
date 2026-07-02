@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BeatSpot – DJ Booking App (Prototyp)</title>
+<style>
+  /* ===================== Grundlagen & Farbwelt (Dark / Club-Look) ===================== */
+  :root{
+    --bg-app: #0b0710;
+    --bg-elevated: #14101d;
+    --bg-card: #1b1526;
+    --bg-card-hover: #221b30;
+    --border-subtle: #2a2236;
+    --text-primary: #f4f1f8;
+    --text-secondary: #a89bc0;
+    --text-muted: #6f6484;
+    --neon-magenta: #ff2ee6;
+    --neon-cyan: #2ef2ff;
+    --neon-violet: #8a3ffc;
+    --success: #33e6a0;
+    --danger: #ff4d6d;
+    --warning: #ffb020;
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
+  }
+
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background:#000;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--text-primary);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+  }
+
+  /* Handy-Rahmen: auf großen Bildschirmen wie ein Smartphone dargestellt */
+  .phone{
+    width:390px;
+    max-width:100vw;
+    height:844px;
+    max-height:100vh;
+    background: var(--bg-app);
+    position:relative;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    box-shadow: 0 0 0 10px #050308, 0 0 60px rgba(138,63,252,0.35);
+  }
+  @media (min-width: 440px){
+    .phone{ border-radius:44px; margin: 20px 0; }
+  }
+
+  button, input, select, textarea{ font-family: inherit; }
+  button{ cursor:pointer; }
+
+  ::-webkit-scrollbar{ width:0; height:0; }
+
+  /* ===================== Header ===================== */
+  .app-header{
+    flex:0 0 auto;
+    padding: 18px 18px 12px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background: linear-gradient(180deg, rgba(138,63,252,0.15), transparent);
+    border-bottom:1px solid var(--border-subtle);
+  }
+  .logo{
+    font-size:20px;
+    font-weight:800;
+    letter-spacing:0.5px;
+    background: linear-gradient(90deg, var(--neon-magenta), var(--neon-cyan));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  .logo span{ font-weight:400; color: var(--text-secondary); -webkit-text-fill-color: var(--text-secondary); }
+
+  /* Rollen-Switcher im Header */
+  .role-switch{
+    display:flex;
+    background: var(--bg-elevated);
+    border:1px solid var(--border-subtle);
+    border-radius: 999px;
+    padding:3px;
+    gap:2px;
+  }
+  .role-switch button{
+    border:none;
+    background:transparent;
+    color: var(--text-secondary);
+    font-size:12.5px;
+    font-weight:600;
+    padding:7px 12px;
+    border-radius:999px;
+    transition: all .25s ease;
+    display:flex; align-items:center; gap:5px;
+  }
+  .role-switch button.active{
+    color:#0b0710;
+    background: linear-gradient(90deg, var(--neon-magenta), var(--neon-violet));
+    box-shadow: 0 0 14px rgba(255,46,230,0.5);
+  }
+  .role-switch button:active{ transform: scale(0.94); }
+
+  /* ===================== Hauptbereich ===================== */
+  .app-main{
+    flex:1 1 auto;
+    position:relative;
+    overflow:hidden;
+  }
+  .tab-content{
+    position:absolute;
+    inset:0;
+    overflow-y:auto;
+    padding: 16px 16px 90px;
+    display:none;
+    animation: fadeIn .28s ease;
+  }
+  .tab-content.active{ display:block; }
+  @keyframes fadeIn{ from{ opacity:0; transform: translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+  .section-title{
+    font-size:15px;
+    font-weight:700;
+    margin: 18px 0 10px;
+    color: var(--text-primary);
+  }
+  .section-title:first-child{ margin-top:2px; }
+  .subtle-text{ color: var(--text-secondary); font-size:13px; }
+
+  /* ===================== Suchleiste & Filter ===================== */
+  .search-bar{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background: var(--bg-card);
+    border:1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+  }
+  .search-bar input{
+    flex:1;
+    background:transparent;
+    border:none;
+    outline:none;
+    color: var(--text-primary);
+    font-size:14px;
+  }
+  .search-bar input::placeholder{ color: var(--text-muted); }
+  .icon-btn{
+    background: var(--bg-elevated);
+    border:1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    border-radius: var(--radius-sm);
+    width:40px; height:40px;
+    display:flex; align-items:center; justify-content:center;
+    flex:0 0 auto;
+  }
+  .icon-btn.active{ color: var(--neon-cyan); border-color: var(--neon-cyan); box-shadow:0 0 10px rgba(46,242,255,0.35); }
+  .icon-btn:active, .search-bar:active{ transform: scale(0.97); }
+
+  .filter-panel{
+    margin-top:12px;
+    background: var(--bg-elevated);
+    border:1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding:14px;
+    display:none;
+  }
+  .filter-panel.open{ display:block; animation: fadeIn .25s ease; }
+  .filter-group{ margin-bottom:14px; }
+  .filter-group:last-child{ margin-bottom:0; }
+  .filter-label{ font-size:12px; color:var(--text-secondary); font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; display:block; }
+  .chip-row{ display:flex; flex-wrap:wrap; gap:8px; }
+  .chip{
+    padding:7px 13px;
+    border-radius:999px;
+    background: var(--bg-card);
+    border:1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    font-size:12.5px;
+    font-weight:600;
+    transition: all .2s ease;
+  }
+  .chip.selected{
+    color:#0b0710;
+    background: linear-gradient(90deg, var(--neon-cyan), var(--neon-violet));
+    border-color: transparent;
+  }
+  .chip:active{ transform: scale(0.95); }
+  select.filter-select{
+    width:100%;
+    background: var(--bg-card);
+    border:1px solid var(--border-subtle);
+    color: var(--text-primary);
+    padding:9px 10px;
+    border-radius: var(--radius-sm);
+    font-size:13px;
+  }
+  .checkbox-row{ display:flex; align-items:center; gap:8px; }
+  .checkbox-row input{ width:18px; height:18px; accent-color: var(--neon-magenta); }
+  .checkbox-row label{ font-size:13px; color: var(--text-secondary); }
+
+  /* ===================== DJ-Karten ===================== */
+  .dj-list{ display:flex; flex-direction:column; gap:12px; margin-top:12px; }
+  .dj-card{
+    display:flex;
+    gap:12px;
+    background: var(--bg-card);
+    border:1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding:12px;
+    transition: all .2s ease;
+  }
+  .dj-card:active{ transform: scale(0.98); background: var(--bg-card-hover); }
+  .avatar{
+    width:60px; height:60px;
+    border-radius:16px;
+    flex:0 0 auto;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:18px; color:#0b0710;
+  }
+  .avatar.round{ border-radius:50%; }
+  .dj-card-info{ flex:1; min-width:0; }
+  .dj-card-info .name{ font-weight:700; font-size:15px; margin-bottom:2px; display:flex; align-items:center; gap:6px;}
+  .dj-card-info .genre{ font-size:12.5px; color: var(--text-secondary); margin-bottom:6px; }
+  .dj-meta{ display:flex; align-items:center; gap:12px; font-size:12.5px; color: var(--text-secondary); }
+  .rating{ display:flex; align-items:center; gap:3px; color: var(--warning); font-weight:700; }
+  .price-tag{ font-weight:700; color: var(--neon-cyan); }
+  .badge-available{
+    font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:999px;
+    background: rgba(51,230,160,0.15); color: var(--success); border:1px solid rgba(51,230,160,0.4);
+  }
+  .empty-state{ text-align:center; padding: 50px 20px; color: var(--text-muted); }
+  .empty-state svg{ opacity:0.4; margin-bottom:10px; }
+
+  /* ===================== Buttons ===================== */
+  .btn{
+    border:none;
+    border-radius: var(--radius-md);
+    padding: 13px 18px;
+    font-weight:700;
+    font-size:14.5px;
+    min-height:44px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    transition: all .18s ease;
+    width:100%;
+  }
+  .btn:active{ transform: scale(0.96); }
+  .btn-primary{
+    background: linear-gradient(90deg, var(--neon-magenta), var(--neon-violet));
+    color:#fff;
+    box-shadow: 0 4px 18px rgba(255,46,230,0.35);
+  }
+  .btn-outline{
+    background: transparent;
+    color: var(--text-primary);
+    border:1.5px solid var(--border-subtle);
+  }
+  .btn-outline.followed{ border-color: var(--neon-cyan); color: var(--neon-cyan); }
+  .btn-success{ background: var(--success); color:#0b0710; }
+  .btn-danger{ background: transparent; border:1.5px solid var(--danger); color: var(--danger); }
+  .btn-sm{ padding:9px 12px; font-size:13px; min-height:38px; width:auto; }
+  .btn-row{ display:flex; gap:10px; }
+
+  /* ===================== Overlays (Detailansichten) ===================== */
+  .overlay{
+    position:absolute; inset:0;
+    background: var(--bg-app);
+    z-index:50;
+    display:none;
+    flex-direction:column;
+    transform: translateX(100%);
+    transition: transform .32s cubic-bezier(.4,0,.2,1);
+  }
+  .overlay.open{ display:flex; transform: translateX(0); }
+  .overlay-header{
+    flex:0 0 auto;
+    display:flex; align-items:center; gap:12px;
+    padding: 18px 16px 14px;
+    border-bottom:1px solid var(--border-subtle);
+  }
+  .overlay-header h2{ font-size:16px; margin:0; font-weight:700; }
+  .overlay-body{ flex:1 1 auto; overflow-y:auto; padding: 18px 16px 100px; }
+  .back-btn{
+    background: var(--bg-elevated);
+    border:1px solid var(--border-subtle);
+    color: var(--text-primary);
+    width:38px; height:38px; border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    flex:0 0 auto;
+  }
+  .back-btn:active{ transform: scale(0.9); }
+
+  /* DJ-Detail / Profil Kopf */
+  .profile-hero{ display:flex; flex-direction:column; align-items:center; text-align:center; margin-bottom:20px; }
+  .profile-hero .avatar{ width:88px; height:88px; font-size:26px; margin-bottom:12px; box-shadow: 0 0 26px rgba(255,46,230,0.4); }
+  .profile-hero h3{ margin:0 0 4px; font-size:19px; }
+  .profile-hero .genre{ color: var(--text-secondary); font-size:13px; margin-bottom:10px; }
+  .stat-row{ display:flex; gap:22px; margin-top:6px; }
+  .stat{ text-align:center; }
+  .stat .num{ font-weight:800; font-size:16px; }
+  .stat .lbl{ font-size:11px; color: var(--text-muted); text-transform:uppercase; letter-spacing:0.4px; }
+
+  .tag-row{ display:flex; flex-wrap:wrap; gap:7px; margin: 10px 0; }
+  .tag{ padding:5px 11px; border-radius:999px; background: var(--bg-elevated); border:1px solid var(--border-subtle); font-size:11.5px; color: var(--neon-cyan); }
+
+  .info-block{ background: var(--bg-card); border:1px solid var(--border-subtle); border-radius: var(--radius-md); padding:14px; margin-bottom:12px; }
+  .info-block h4{ margin:0 0 8px; font-size:13px; color: var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; }
+  .mix-item, .gig-item{ display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border-subtle); }
+  .mix-item:last-child, .gig-item:last-child{ border-bottom:none; }
+  .mix-play{ width:34px; height:34px; border-radius:50%; background: var(--bg-elevated); display:flex; align-items:center; justify-content:center; color: var(--neon-magenta); flex:0 0 auto; }
+  .gig-date-box{ width:44px; height:44px; border-radius:10px; background: var(--bg-elevated); display:flex; flex-direction:column; align-items:center; justify-content:center; flex:0 0 auto; }
+  .gig-date-box .d{ font-weight:800; font-size:14px; line-height:1; }
+  .gig-date-box .m{ font-size:9px; color: var(--text-muted); text-transform:uppercase; }
+
+  /* ===================== Buchungsflow ===================== */
+  .step-indicator{ display:flex; gap:6px; padding: 0 16px 14px; }
+  .step-dot{ flex:1; height:4px; border-radius:4px; background: var(--border-subtle); }
+  .step-dot.done{ background: linear-gradient(90deg, var(--neon-magenta), var(--neon-cyan)); }
+  .form-group{ margin-bottom:16px; }
+  .form-group label{ display:block; font-size:12.5px; font-weight:700; color: var(--text-secondary); margin-bottom:7px; }
+  .form-group input, .form-group select, .form-group textarea{
+    width:100%;
+    background: var(--bg-card);
+    border:1px solid var(--border-subtle);
+    color: var(--text-primary);
+    padding:12px;
+    border-radius: var(--radius-sm);
+    font-size:14px;
+  }
+  .form-group textarea{ resize:none; min-height:80px; }
+  .type-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .type-option{
+    padding:12px 8px; text-align:center; border-radius: var(--radius-sm);
+    background: var(--bg-card); border:1.5px solid var(--border-subtle);
+    font-size:13px; color: var(--text-secondary); font-weight:600;
+  }
+  .type-option.selected{ border-color: var(--neon-magenta); color: var(--neon-magenta); background: rgba(255,46,230,0.08); }
+  .booking-summary-row{ display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border-subtle); font-size:13.5px; }
+  .booking-summary-row:last-child{ border-bottom:none; }
+  .booking-summary-row .lbl{ color: var(--text-secondary); }
+
+  .confirm-wrap{ text-align:center; padding-top:30px; }
+  .confirm-check{
+    width:84px; height:84px; border-radius:50%; margin:0 auto 20px;
+    background: radial-gradient(circle, rgba(51,230,160,0.25), transparent 70%);
+    display:flex; align-items:center; justify-content:center;
+    animation: pop .4s ease;
+  }
+  .confirm-check svg{ color: var(--success); }
+  @keyframes pop{ 0%{ transform: scale(0); opacity:0;} 70%{ transform: scale(1.1);} 100%{ transform: scale(1); opacity:1; } }
+
+  /* ===================== Feed ===================== */
+  .follow-scroll{ display:flex; gap:12px; overflow-x:auto; padding-bottom:6px; margin-bottom:6px; }
+  .follow-item{ flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:6px; width:64px; }
+  .follow-item .avatar{ width:54px; height:54px; border:2px solid var(--border-subtle); }
+  .follow-item.is-followed .avatar{ border-color: var(--neon-cyan); box-shadow:0 0 10px rgba(46,242,255,0.4); }
+  .follow-item span{ font-size:10.5px; color: var(--text-secondary); text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:64px; }
+
+  .post-card{ background: var(--bg-card); border:1px solid var(--border-subtle); border-radius: var(--radius-lg); padding:14px; margin-bottom:12px; }
+  .post-head{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .post-head .avatar{ width:40px; height:40px; font-size:13px; }
+  .post-head .who{ flex:1; }
+  .post-head .who .n{ font-weight:700; font-size:13.5px; }
+  .post-head .who .t{ font-size:11px; color: var(--text-muted); }
+  .post-text{ font-size:13.5px; line-height:1.5; color: var(--text-primary); margin-bottom:10px; }
+  .post-footer{ display:flex; align-items:center; gap:16px; color: var(--text-secondary); font-size:12.5px; }
+  .post-footer .likebtn{ display:flex; align-items:center; gap:5px; }
+  .post-footer .likebtn.liked{ color: var(--neon-magenta); }
+
+  /* ===================== Party-Karte ===================== */
+  .map-canvas{
+    position:relative;
+    height:260px;
+    border-radius: var(--radius-lg);
+    overflow:hidden;
+    background-color:#120c1c;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0 2px, transparent 2px 46px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0 2px, transparent 2px 62px),
+      radial-gradient(circle at 30% 30%, rgba(138,63,252,0.25), transparent 55%),
+      radial-gradient(circle at 80% 75%, rgba(46,242,255,0.15), transparent 50%);
+    border:1px solid var(--border-subtle);
+  }
+  .map-pin{
+    position:absolute;
+    transform: translate(-50%,-100%);
+    display:flex; flex-direction:column; align-items:center;
+    animation: floatPin 2.6s ease-in-out infinite;
+  }
+  @keyframes floatPin{ 0%,100%{ transform: translate(-50%,-100%);} 50%{ transform: translate(-50%,-107%);} }
+  .map-pin .dot{
+    width:30px; height:30px; border-radius:50% 50% 50% 0;
+    background: linear-gradient(135deg, var(--neon-magenta), var(--neon-violet));
+    transform: rotate(45deg);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 0 14px rgba(255,46,230,0.7);
+  }
+  .map-pin .dot svg{ transform: rotate(-45deg); }
+  .map-pin.mine .dot{ background: linear-gradient(135deg, var(--neon-cyan), var(--success)); box-shadow:0 0 14px rgba(46,242,255,0.7); }
+  .map-legend{ display:flex; gap:14px; margin-top:10px; font-size:11px; color: var(--text-muted); align-items:center; }
+  .map-legend .dotlegend{ width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:5px; }
+
+  .event-card{ display:flex; gap:12px; background: var(--bg-card); border:1px solid var(--border-subtle); border-radius: var(--radius-lg); padding:12px; margin-bottom:12px; }
+  .event-card:active{ transform: scale(0.98); }
+  .event-time-box{
+    width:56px; flex:0 0 auto; border-radius:12px; background: var(--bg-elevated);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; padding:8px 0;
+  }
+  .event-time-box .day{ font-size:10px; font-weight:700; color: var(--neon-magenta); text-transform:uppercase; }
+  .event-time-box .time{ font-size:13px; font-weight:700; margin-top:2px; }
+  .event-info{ flex:1; min-width:0; }
+  .event-info .n{ font-weight:700; font-size:14px; margin-bottom:2px; }
+  .event-info .loc{ font-size:12px; color: var(--text-secondary); display:flex; align-items:center; gap:4px; margin-bottom:5px;}
+  .event-info .lineup{ font-size:11.5px; color: var(--text-muted); }
+
+  /* ===================== DJ-Rolle: Anfragen ===================== */
+  .request-card{ background: var(--bg-card); border:1px solid var(--border-subtle); border-radius: var(--radius-lg); padding:14px; margin-bottom:12px; }
+  .request-top{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
+  .request-top .n{ font-weight:700; font-size:14.5px; }
+  .status-badge{ font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:999px; text-transform:uppercase; letter-spacing:0.3px; }
+  .status-badge.offen{ background: rgba(255,176,32,0.15); color: var(--warning); border:1px solid rgba(255,176,32,0.4); }
+  .status-badge.bestaetigt{ background: rgba(51,230,160,0.15); color: var(--success); border:1px solid rgba(51,230,160,0.4); }
+  .status-badge.abgelehnt{ background: rgba(255,77,109,0.15); color: var(--danger); border:1px solid rgba(255,77,109,0.4); }
+  .request-details{ font-size:12.5px; color: var(--text-secondary); display:flex; flex-direction:column; gap:4px; margin-bottom:10px; }
+  .request-details div{ display:flex; align-items:center; gap:6px; }
+
+  /* ===================== DJ-Rolle: Profil bearbeiten ===================== */
+  .post-composer{ background: var(--bg-card); border:1px solid var(--border-subtle); border-radius: var(--radius-lg); padding:14px; margin-bottom:16px; }
+  .post-composer textarea{ width:100%; background: var(--bg-elevated); border:1px solid var(--border-subtle); color: var(--text-primary); border-radius: var(--radius-sm); padding:10px; font-size:13.5px; min-height:64px; resize:none; margin-bottom:10px; }
+
+  /* ===================== Bottom Tab-Bar ===================== */
+  .bottom-nav{
+    flex:0 0 auto;
+    display:flex;
+    background: rgba(20,16,29,0.95);
+    backdrop-filter: blur(10px);
+    border-top:1px solid var(--border-subtle);
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+  }
+  .nav-btn{
+    flex:1;
+    background:transparent;
+    border:none;
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+    padding:8px 4px;
+    color: var(--text-muted);
+    border-radius: var(--radius-sm);
+    min-height:44px;
+    transition: all .2s ease;
+  }
+  .nav-btn.active{ color: var(--neon-cyan); text-shadow: 0 0 12px rgba(46,242,255,0.6); }
+  .nav-btn span{ font-size:10.5px; font-weight:700; }
+  .nav-btn:active{ transform: scale(0.92); }
+
+  .toast{
+    position:absolute; bottom:100px; left:50%; transform: translateX(-50%) translateY(20px);
+    background: var(--bg-elevated); border:1px solid var(--neon-cyan);
+    color: var(--text-primary); padding:10px 18px; border-radius:999px;
+    font-size:12.5px; font-weight:600; box-shadow:0 0 16px rgba(46,242,255,0.4);
+    opacity:0; pointer-events:none; transition: all .3s ease; z-index:200; white-space:nowrap;
+  }
+  .toast.show{ opacity:1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="phone">
+
+  <!-- ===================== Header mit Rollen-Switcher ===================== -->
+  <header class="app-header">
+    <div class="logo">Beat<span>Spot</span></div>
+    <div class="role-switch">
+      <button id="role-btn-user" class="active" onclick="setRole('user')">🎉 Partygänger</button>
+      <button id="role-btn-dj" onclick="setRole('dj')">🎧 DJ</button>
+    </div>
+  </header>
+
+  <!-- ===================== Hauptbereich mit Tabs & Overlays ===================== -->
+  <main class="app-main" id="app-main">
+
+    <!-- TAB 1a: Nutzer – DJ-Suche & Buchung -->
+    <section class="tab-content" id="tab-1-user">
+      <div class="search-bar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="search-input" placeholder="DJ oder Genre suchen…" oninput="renderDjList()">
+        <button class="icon-btn" id="filter-toggle-btn" onclick="toggleFilterPanel()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="filter-panel" id="filter-panel">
+        <div class="filter-group">
+          <span class="filter-label">Genre</span>
+          <div class="chip-row" id="genre-chip-row"></div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Preis pro Stunde</span>
+          <select class="filter-select" id="filter-price" onchange="renderDjList()">
+            <option value="all">Alle Preise</option>
+            <option value="0-100">bis 100 €</option>
+            <option value="100-125">100 € – 125 €</option>
+            <option value="125-999">ab 125 €</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Ort</span>
+          <select class="filter-select" id="filter-city" onchange="renderDjList()">
+            <option value="all">Alle Städte</option>
+          </select>
+        </div>
+        <div class="filter-group" style="margin-bottom:0;">
+          <span class="filter-label">Verfügbarkeit</span>
+          <div class="checkbox-row">
+            <input type="checkbox" id="filter-available" onchange="renderDjList()">
+            <label for="filter-available">Nur diese Woche verfügbare DJs anzeigen</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">DJs in deiner Nähe</div>
+      <div class="dj-list" id="dj-list"></div>
+    </section>
+
+    <!-- TAB 1b: DJ – Buchungsanfragen -->
+    <section class="tab-content" id="tab-1-dj">
+      <div class="section-title">Deine Buchungsanfragen</div>
+      <p class="subtle-text" style="margin-top:-4px; margin-bottom:14px;">Nutzer haben dich als DJ „<b id="loggedin-dj-name-1"></b>“ für Events angefragt.</p>
+      <div id="request-list"></div>
+    </section>
+
+    <!-- TAB 2a: Nutzer – Feed & Folgen -->
+    <section class="tab-content" id="tab-2-user">
+      <div class="section-title">DJs zum Folgen</div>
+      <div class="follow-scroll" id="follow-scroll"></div>
+
+      <div class="section-title">Dein Feed</div>
+      <div id="feed-list"></div>
+    </section>
+
+    <!-- TAB 2b: DJ – Mein Profil -->
+    <section class="tab-content" id="tab-2-dj">
+      <div class="profile-hero">
+        <div class="avatar round" id="dj-self-avatar"></div>
+        <h3 id="dj-self-name"></h3>
+        <div class="genre" id="dj-self-genre"></div>
+        <div class="stat-row">
+          <div class="stat"><div class="num" id="dj-self-followers"></div><div class="lbl">Follower</div></div>
+          <div class="stat"><div class="num" id="dj-self-rating"></div><div class="lbl">Bewertung</div></div>
+          <div class="stat"><div class="num" id="dj-self-price"></div><div class="lbl">€ / Std.</div></div>
+        </div>
+      </div>
+
+      <div class="info-block">
+        <h4>Profil bearbeiten</h4>
+        <div class="form-group">
+          <label>Bio</label>
+          <textarea id="edit-bio" oninput="updateSelfProfile()"></textarea>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>Preis pro Stunde (€)</label>
+          <input type="number" id="edit-price" min="0" step="5" oninput="updateSelfProfile()">
+        </div>
+      </div>
+
+      <div class="post-composer">
+        <h4 style="margin:0 0 10px; font-size:13px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px;">Neuen Beitrag / Gig ankündigen</h4>
+        <textarea id="new-post-text" placeholder="Was gibt's Neues? z.B. neuer Gig, neuer Mix…"></textarea>
+        <button class="btn btn-primary" onclick="postAnnouncement()">Posten</button>
+      </div>
+
+      <div class="section-title">Deine kommenden Gigs</div>
+      <div id="dj-self-gigs"></div>
+    </section>
+
+    <!-- TAB 3: Party-Karte (für beide Rollen gleich) -->
+    <section class="tab-content" id="tab-3">
+      <div class="section-title">Party-Karte</div>
+      <div class="map-canvas" id="map-canvas"></div>
+      <div class="map-legend">
+        <span><span class="dotlegend" style="background:var(--neon-magenta);"></span>Event</span>
+        <span><span class="dotlegend" style="background:var(--neon-cyan);"></span>Dein Gig</span>
+      </div>
+
+      <div class="section-title">Heute Abend in deiner Nähe</div>
+      <div id="tonight-list"></div>
+    </section>
+
+    <!-- ===================== OVERLAY: DJ-Detail ===================== -->
+    <section class="overlay" id="overlay-dj-detail">
+      <div class="overlay-header">
+        <button class="back-btn" onclick="closeOverlay('overlay-dj-detail')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <h2>DJ-Profil</h2>
+      </div>
+      <div class="overlay-body" id="dj-detail-body"></div>
+    </section>
+
+    <!-- ===================== OVERLAY: DJ-Profil (Feed-Ansicht) ===================== -->
+    <section class="overlay" id="overlay-dj-profile">
+      <div class="overlay-header">
+        <button class="back-btn" onclick="closeOverlay('overlay-dj-profile')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <h2>Profil</h2>
+      </div>
+      <div class="overlay-body" id="dj-profile-body"></div>
+    </section>
+
+    <!-- ===================== OVERLAY: Buchungsflow ===================== -->
+    <section class="overlay" id="overlay-booking">
+      <div class="overlay-header">
+        <button class="back-btn" onclick="handleBookingBack()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <h2 id="booking-step-title">Jetzt buchen</h2>
+      </div>
+      <div class="step-indicator">
+        <div class="step-dot" id="step-dot-1"></div>
+        <div class="step-dot" id="step-dot-2"></div>
+        <div class="step-dot" id="step-dot-3"></div>
+      </div>
+      <div class="overlay-body">
+
+        <!-- Schritt 1: Termin -->
+        <div id="booking-step-1">
+          <div class="form-group">
+            <label>Datum</label>
+            <input type="date" id="booking-date">
+          </div>
+          <div class="form-group">
+            <label>Uhrzeit</label>
+            <input type="time" id="booking-time" value="22:00">
+          </div>
+          <button class="btn btn-primary" onclick="goToBookingStep(2)">Weiter</button>
+        </div>
+
+        <!-- Schritt 2: Event-Typ -->
+        <div id="booking-step-2" style="display:none;">
+          <div class="form-group">
+            <label>Art des Events</label>
+            <div class="type-grid" id="event-type-grid"></div>
+          </div>
+          <div class="form-group">
+            <label>Nachricht an den DJ (optional)</label>
+            <textarea id="booking-message" placeholder="z.B. Musikwünsche, Ort, weitere Infos…"></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="goToBookingStep(3)">Weiter zur Übersicht</button>
+        </div>
+
+        <!-- Schritt 3: Übersicht & Senden -->
+        <div id="booking-step-3" style="display:none;">
+          <div class="info-block" id="booking-summary"></div>
+          <button class="btn btn-primary" onclick="submitBooking()">Anfrage senden</button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===================== OVERLAY: Buchungsbestätigung ===================== -->
+    <section class="overlay" id="overlay-confirmation">
+      <div class="overlay-header">
+        <button class="back-btn" onclick="finishBookingFlow()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <h2>Bestätigung</h2>
+      </div>
+      <div class="overlay-body">
+        <div class="confirm-wrap">
+          <div class="confirm-check">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <h3 style="margin:0 0 8px;">Anfrage gesendet!</h3>
+          <p class="subtle-text" style="margin-bottom:22px;">Der DJ erhält deine Anfrage und meldet sich zeitnah bei dir zurück.</p>
+          <div class="info-block" id="confirmation-summary" style="text-align:left;"></div>
+          <button class="btn btn-primary" onclick="finishBookingFlow()">Fertig</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== OVERLAY: Event-Detail ===================== -->
+    <section class="overlay" id="overlay-event-detail">
+      <div class="overlay-header">
+        <button class="back-btn" onclick="closeOverlay('overlay-event-detail')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <h2>Event-Details</h2>
+      </div>
+      <div class="overlay-body" id="event-detail-body"></div>
+    </section>
+
+  </main>
+
+  <!-- ===================== Bottom Tab-Bar ===================== -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-btn-1" onclick="switchTab(1)">
+      <svg id="nav-icon-1" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+      <span id="nav-label-1">Suche</span>
+    </button>
+    <button class="nav-btn" id="nav-btn-2" onclick="switchTab(2)">
+      <svg id="nav-icon-2" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+      <span id="nav-label-2">Feed</span>
+    </button>
+    <button class="nav-btn" id="nav-btn-3" onclick="switchTab(3)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.447-2.724A1 1 0 0 1 3 16.382V5.618a1 1 0 0 1 1.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0 0 21 18.382V7.618a1 1 0 0 0-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+      <span>Karte</span>
+    </button>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* =======================================================================
+   MOCK-DATEN
+   ======================================================================= */
+
+// Sammlung wiederverwendbarer SVG-Icon-Pfade (werden per JS in Elemente eingesetzt)
+const ICONS = {
+  search: '<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+  heart: '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/>',
+  user: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  location: '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  check: '<polyline points="20 6 9 17 4 12"/>',
+  x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  play: '<polygon points="5 3 19 12 5 21 5 3"/>',
+  users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'
+};
+
+// 6 DJs mit realistischen Beispieldaten
+const djs = [
+  { id: 1, name: "DJ Nova", genre: "Techno", genres: ["Techno", "House"], price: 120, rating: 4.8, city: "Berlin",
+    color: "linear-gradient(135deg,#ff2ee6,#8a3ffc)", available: true,
+    bio: "DJ Nova bringt seit über 8 Jahren Clubs in Berlin und ganz Europa zum Beben. Bekannt für treibende Techno-Sets mit hypnotischen Synth-Layern.",
+    followers: 12400,
+    mixes: [{title:"Warehouse Session Vol. 4", duration:"58 Min"}, {title:"Midnight Drive", duration:"42 Min"}] },
+  { id: 2, name: "Luna Beats", genre: "House", genres: ["House", "Deep House"], price: 95, rating: 4.6, city: "Hamburg",
+    color: "linear-gradient(135deg,#2ef2ff,#8a3ffc)", available: true,
+    bio: "Luna Beats steht für warme House-Grooves und sonnige Rooftop-Vibes. Ihre Sets sind der perfekte Soundtrack für laue Sommernächte.",
+    followers: 8700,
+    mixes: [{title:"Rooftop Sunset Mix", duration:"63 Min"}] },
+  { id: 3, name: "MC Solstice", genre: "Hip-Hop", genres: ["Hip-Hop", "Rap"], price: 110, rating: 4.9, city: "München",
+    color: "linear-gradient(135deg,#ffb020,#ff2ee6)", available: false,
+    bio: "MC Solstice verbindet Old-School-Hip-Hop mit aktuellen Rap-Hits und bringt garantiert jede Crowd zum Mitsingen.",
+    followers: 15600,
+    mixes: [{title:"Backstage Anthems", duration:"50 Min"}, {title:"Old School Classics", duration:"71 Min"}] },
+  { id: 4, name: "Electra Vibe", genre: "EDM", genres: ["EDM", "Electro"], price: 140, rating: 4.7, city: "Köln",
+    color: "linear-gradient(135deg,#8a3ffc,#2ef2ff)", available: true,
+    bio: "Electra Vibe liefert bombastische EDM-Drops und energiegeladene Bühnenshows für Festivals und große Clubnächte.",
+    followers: 21300,
+    mixes: [{title:"Festival Anthem Set", duration:"55 Min"}] },
+  { id: 5, name: "DJ Kalypso", genre: "Latin", genres: ["Latin", "Reggaeton"], price: 90, rating: 4.5, city: "Frankfurt",
+    color: "linear-gradient(135deg,#33e6a0,#2ef2ff)", available: true,
+    bio: "DJ Kalypso bringt karibisches Flair nach Deutschland – Reggaeton, Latin-Pop und Salsa für die perfekte Tanzfläche.",
+    followers: 6300,
+    mixes: [{title:"Fiesta Latina Mix", duration:"47 Min"}] },
+  { id: 6, name: "Nightshade", genre: "Dark Techno", genres: ["Techno", "Industrial"], price: 130, rating: 4.9, city: "Berlin",
+    color: "linear-gradient(135deg,#6f6484,#ff2ee6)", available: false,
+    bio: "Nightshade steht für rohe, düstere Techno-Sounds und intensive Warehouse-Atmosphäre. Nichts für schwache Nerven.",
+    followers: 18900,
+    mixes: [{title:"Industrial Nights", duration:"66 Min"}, {title:"Bunker Tapes", duration:"39 Min"}] },
+];
+
+// 5 Events für die Party-Karte
+const events = [
+  { id: 1, name: "Neon Nights", location: "Warehouse 9", city: "Berlin", dayLabel: "Heute", time: "23:00", lineup: ["DJ Nova", "Nightshade"], entry: 15, x: 25, y: 38 },
+  { id: 2, name: "Sunset Sessions", location: "Rooftop Club", city: "Hamburg", dayLabel: "Heute", time: "22:00", lineup: ["Luna Beats"], entry: 10, x: 68, y: 22 },
+  { id: 3, name: "Beat Explosion", location: "Halle 2", city: "München", dayLabel: "Morgen", time: "21:30", lineup: ["MC Solstice", "Electra Vibe"], entry: 20, x: 47, y: 62 },
+  { id: 4, name: "Latin Fever", location: "Club Havanna", city: "Frankfurt", dayLabel: "Heute", time: "23:30", lineup: ["DJ Kalypso"], entry: 12, x: 78, y: 72 },
+  { id: 5, name: "Dark Matter", location: "Bunker Club", city: "Köln", dayLabel: "Sa", time: "00:00", lineup: ["Nightshade", "Electra Vibe"], entry: 18, x: 14, y: 68 },
+];
+
+// Feed-Posts der DJs
+let feedPosts = [
+  { id: 1, djId: 6, text: "Warehouse 9 Berlin, heute Abend – lasst uns die Nacht zum Beben bringen. 🔥", time: "vor 1 Std.", likes: 210, liked: false },
+  { id: 2, djId: 1, text: "Neues Set ist live! Schaut mal in meinen neuesten Mix „Warehouse Session Vol. 4“ rein. 🎧", time: "vor 2 Std.", likes: 128, liked: false },
+  { id: 3, djId: 2, text: "Nächsten Freitag im Rooftop Club Hamburg – wer ist dabei? ☀️", time: "vor 5 Std.", likes: 89, liked: false },
+  { id: 4, djId: 3, text: "Backstage-Vibes vor der Show morgen 🎤", time: "vor 8 Std.", likes: 64, liked: false },
+  { id: 5, djId: 4, text: "Neuer Track in Zusammenarbeit mit Nightshade kommt bald! 👀", time: "vor 1 Tag", likes: 150, liked: false },
+];
+
+// Eingehende Buchungsanfragen für die DJ-Rolle (Demo-DJ = djs[0], "DJ Nova")
+let bookingRequests = [
+  { id: 1, djId: 1, requester: "Sarah M.", eventType: "Geburtstag", date: "2026-07-12", time: "20:00", location: "Privatwohnung, Berlin", message: "Wir feiern meinen 30. – bitte viel House & Charts!", status: "offen" },
+  { id: 2, djId: 1, requester: "Firma Blitz GmbH", eventType: "Firmenfeier", date: "2026-07-20", time: "18:00", location: "Eventhalle Mitte, Berlin", message: "Sommerfest für ca. 150 Mitarbeitende.", status: "bestaetigt" },
+  { id: 3, djId: 1, requester: "Jonas & Lea", eventType: "Hochzeit", date: "2026-08-02", time: "16:00", location: "Schloss Charlottenhof, Potsdam", message: "Standesamtliche Trauung mit anschließender Feier.", status: "abgelehnt" },
+];
+
+const EVENT_TYPES = ["Hochzeit", "Geburtstag", "Firmenfeier", "Club Night", "Private Party", "Festival"];
+
+/* =======================================================================
+   APPLIKATIONS-STATUS
+   ======================================================================= */
+const state = {
+  role: "user",              // "user" oder "dj"
+  currentTab: 1,
+  followed: new Set([1, 2]), // Nutzer folgt anfangs DJ Nova & Luna Beats
+  selectedGenres: new Set(),
+  loggedInDjId: 1,           // Demo: eingeloggter DJ ist "DJ Nova"
+  booking: { djId: null, date: "", time: "", type: "", message: "" },
+  nextRequestId: 4,
+  nextPostId: 6,
+};
+
+function getDj(id){ return djs.find(d => d.id === id); }
+function formatFollowers(n){ return n >= 1000 ? (n/1000).toFixed(1).replace(".0","") + "k" : n; }
+
+/* =======================================================================
+   INITIALISIERUNG
+   ======================================================================= */
+function init(){
+  // Städte-Filter dynamisch aus den DJ-Daten befüllen
+  const citySelect = document.getElementById("filter-city");
+  [...new Set(djs.map(d => d.city))].forEach(city => {
+    const opt = document.createElement("option");
+    opt.value = city; opt.textContent = city;
+    citySelect.appendChild(opt);
+  });
+
+  // Genre-Chips dynamisch erzeugen
+  const genreRow = document.getElementById("genre-chip-row");
+  const allGenres = [...new Set(djs.flatMap(d => d.genres))];
+  allGenres.forEach(g => {
+    const chip = document.createElement("button");
+    chip.className = "chip";
+    chip.textContent = g;
+    chip.onclick = () => {
+      state.selectedGenres.has(g) ? state.selectedGenres.delete(g) : state.selectedGenres.add(g);
+      chip.classList.toggle("selected");
+      renderDjList();
+    };
+    genreRow.appendChild(chip);
+  });
+
+  // Event-Typ-Auswahl im Buchungsflow erzeugen
+  const typeGrid = document.getElementById("event-type-grid");
+  EVENT_TYPES.forEach(type => {
+    const opt = document.createElement("button");
+    opt.className = "type-option";
+    opt.textContent = type;
+    opt.onclick = () => {
+      state.booking.type = type;
+      [...typeGrid.children].forEach(c => c.classList.remove("selected"));
+      opt.classList.add("selected");
+    };
+    typeGrid.appendChild(opt);
+  });
+
+  document.getElementById("booking-date").min = "2026-07-02";
+
+  renderDjList();
+  renderFollowScroll();
+  renderFeed();
+  renderMap();
+  renderTonightList();
+  renderDjRequests();
+  renderSelfProfile();
+  applyRoleToNav();
+  switchTab(1); // Start-Ansicht: Tab 1 aktiv setzen
+}
+
+/* =======================================================================
+   ROLLEN-SWITCH
+   ======================================================================= */
+function setRole(role){
+  state.role = role;
+  document.getElementById("role-btn-user").classList.toggle("active", role === "user");
+  document.getElementById("role-btn-dj").classList.toggle("active", role === "dj");
+  applyRoleToNav();
+  // Beim Rollenwechsel auf Tab 1 zurückspringen für eine klare Orientierung
+  switchTab(1);
+}
+
+// Passt Icons & Labels der Tab-Bar an die aktuelle Rolle an
+function applyRoleToNav(){
+  const icon1 = document.getElementById("nav-icon-1");
+  const label1 = document.getElementById("nav-label-1");
+  const icon2 = document.getElementById("nav-icon-2");
+  const label2 = document.getElementById("nav-label-2");
+
+  if(state.role === "user"){
+    icon1.innerHTML = ICONS.search; label1.textContent = "Suche";
+    icon2.innerHTML = ICONS.heart;  label2.textContent = "Feed";
+  } else {
+    icon1.innerHTML = ICONS.inbox;  label1.textContent = "Anfragen";
+    icon2.innerHTML = ICONS.user;   label2.textContent = "Profil";
+  }
+
+  // Sichtbarkeit der rollenspezifischen Tab-Inhalte umschalten
+  document.getElementById("tab-1-user").style.display = state.role === "user" ? "" : "none";
+  document.getElementById("tab-1-dj").style.display = state.role === "dj" ? "" : "none";
+  document.getElementById("tab-2-user").style.display = state.role === "user" ? "" : "none";
+  document.getElementById("tab-2-dj").style.display = state.role === "dj" ? "" : "none";
+}
+
+/* =======================================================================
+   TAB-NAVIGATION
+   ======================================================================= */
+function switchTab(n){
+  state.currentTab = n;
+  document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach(el => el.classList.remove("active"));
+
+  if(n === 1){
+    document.getElementById(state.role === "user" ? "tab-1-user" : "tab-1-dj").classList.add("active");
+  } else if(n === 2){
+    document.getElementById(state.role === "user" ? "tab-2-user" : "tab-2-dj").classList.add("active");
+  } else {
+    document.getElementById("tab-3").classList.add("active");
+  }
+  document.getElementById("nav-btn-" + n).classList.add("active");
+}
+
+/* =======================================================================
+   OVERLAY-STEUERUNG (Detailansichten)
+   ======================================================================= */
+function openOverlay(id){ document.getElementById(id).classList.add("open"); }
+function closeOverlay(id){ document.getElementById(id).classList.remove("open"); }
+
+/* =======================================================================
+   TAB 1 (Nutzer): DJ-SUCHE & FILTER
+   ======================================================================= */
+function toggleFilterPanel(){
+  document.getElementById("filter-panel").classList.toggle("open");
+  document.getElementById("filter-toggle-btn").classList.toggle("active");
+}
+
+function renderDjList(){
+  const query = document.getElementById("search-input").value.trim().toLowerCase();
+  const priceFilter = document.getElementById("filter-price").value;
+  const cityFilter = document.getElementById("filter-city").value;
+  const onlyAvailable = document.getElementById("filter-available").checked;
+
+  let list = djs.filter(dj => {
+    const matchesQuery = !query || dj.name.toLowerCase().includes(query) || dj.genre.toLowerCase().includes(query);
+    const matchesGenre = state.selectedGenres.size === 0 || dj.genres.some(g => state.selectedGenres.has(g));
+    const matchesCity = cityFilter === "all" || dj.city === cityFilter;
+    const matchesAvailability = !onlyAvailable || dj.available;
+    let matchesPrice = true;
+    if(priceFilter !== "all"){
+      const [min, max] = priceFilter.split("-").map(Number);
+      matchesPrice = dj.price >= min && dj.price <= max;
+    }
+    return matchesQuery && matchesGenre && matchesCity && matchesAvailability && matchesPrice;
+  });
+
+  const container = document.getElementById("dj-list");
+  container.innerHTML = "";
+
+  if(list.length === 0){
+    container.innerHTML = `<div class="empty-state">
+      <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">${ICONS.search}</svg>
+      <p>Keine DJs für diese Filter gefunden.</p>
+    </div>`;
+    return;
+  }
+
+  list.forEach(dj => {
+    const card = document.createElement("div");
+    card.className = "dj-card";
+    card.onclick = () => openDjDetail(dj.id);
+    card.innerHTML = `
+      <div class="avatar" style="background:${dj.color};">${dj.name.split(" ").map(w=>w[0]).join("").slice(0,2)}</div>
+      <div class="dj-card-info">
+        <div class="name">${dj.name} ${dj.available ? '<span class="badge-available">Verfügbar</span>' : ''}</div>
+        <div class="genre">${dj.genres.join(" · ")} · ${dj.city}</div>
+        <div class="dj-meta">
+          <span class="rating"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">${ICONS.star}</svg> ${dj.rating}</span>
+          <span class="price-tag">${dj.price} €/Std.</span>
+        </div>
+      </div>`;
+    container.appendChild(card);
+  });
+}
+
+function openDjDetail(id){
+  const dj = getDj(id);
+  const body = document.getElementById("dj-detail-body");
+  body.innerHTML = `
+    <div class="profile-hero">
+      <div class="avatar round" style="background:${dj.color};">${dj.name.split(" ").map(w=>w[0]).join("").slice(0,2)}</div>
+      <h3>${dj.name}</h3>
+      <div class="genre">${dj.city}</div>
+      <div class="stat-row">
+        <div class="stat"><div class="num">${dj.rating} ★</div><div class="lbl">Bewertung</div></div>
+        <div class="stat"><div class="num">${formatFollowers(dj.followers)}</div><div class="lbl">Follower</div></div>
+        <div class="stat"><div class="num">${dj.price} €</div><div class="lbl">pro Stunde</div></div>
+      </div>
+      <div class="tag-row">${dj.genres.map(g => `<span class="tag">${g}</span>`).join("")}</div>
+    </div>
+
+    <div class="info-block"><h4>Über ${dj.name}</h4><p style="font-size:13.5px; line-height:1.5; margin:0;">${dj.bio}</p></div>
+
+    <div class="info-block">
+      <h4>Mixes</h4>
+      ${dj.mixes.map(m => `
+        <div class="mix-item">
+          <div class="mix-play"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">${ICONS.play}</svg></div>
+          <div style="flex:1;"><div style="font-size:13px; font-weight:600;">${m.title}</div><div style="font-size:11px; color:var(--text-muted);">${m.duration}</div></div>
+        </div>`).join("")}
+    </div>
+
+    <button class="btn btn-primary" onclick="startBooking(${dj.id})">Jetzt buchen</button>
+  `;
+  openOverlay("overlay-dj-detail");
+}
+
+/* =======================================================================
+   BUCHUNGSFLOW
+   ======================================================================= */
+function startBooking(djId){
+  state.booking = { djId, date: "", time: "22:00", type: "", message: "" };
+  document.getElementById("booking-date").value = "";
+  document.getElementById("booking-time").value = "22:00";
+  document.getElementById("booking-message").value = "";
+  document.querySelectorAll("#event-type-grid .type-option").forEach(o => o.classList.remove("selected"));
+  goToBookingStep(1);
+  closeOverlay("overlay-dj-detail");
+  openOverlay("overlay-booking");
+}
+
+function goToBookingStep(step){
+  ["booking-step-1","booking-step-2","booking-step-3"].forEach((id,i) => {
+    document.getElementById(id).style.display = (i+1 === step) ? "" : "none";
+  });
+  for(let i=1;i<=3;i++){
+    document.getElementById("step-dot-"+i).classList.toggle("done", i <= step);
+  }
+  const titles = {1:"Termin wählen", 2:"Event-Details", 3:"Anfrage prüfen"};
+  document.getElementById("booking-step-title").textContent = titles[step];
+
+  if(step === 2){
+    state.booking.date = document.getElementById("booking-date").value;
+    state.booking.time = document.getElementById("booking-time").value;
+  }
+  if(step === 3){
+    state.booking.message = document.getElementById("booking-message").value;
+    renderBookingSummary();
+  }
+  state.bookingStep = step;
+}
+
+function handleBookingBack(){
+  if(state.bookingStep > 1){
+    goToBookingStep(state.bookingStep - 1);
+  } else {
+    closeOverlay("overlay-booking");
+  }
+}
+
+function renderBookingSummary(){
+  const dj = getDj(state.booking.djId);
+  const dateFormatted = state.booking.date
+    ? new Date(state.booking.date).toLocaleDateString("de-DE", {weekday:"short", day:"2-digit", month:"long"})
+    : "–";
+  document.getElementById("booking-summary").innerHTML = `
+    <div class="booking-summary-row"><span class="lbl">DJ</span><span>${dj.name}</span></div>
+    <div class="booking-summary-row"><span class="lbl">Datum</span><span>${dateFormatted}</span></div>
+    <div class="booking-summary-row"><span class="lbl">Uhrzeit</span><span>${state.booking.time} Uhr</span></div>
+    <div class="booking-summary-row"><span class="lbl">Event-Typ</span><span>${state.booking.type || "–"}</span></div>
+    <div class="booking-summary-row"><span class="lbl">Preis (geschätzt)</span><span class="price-tag">${dj.price} €/Std.</span></div>
+  `;
+}
+
+function submitBooking(){
+  const b = state.booking;
+  const dj = getDj(b.djId);
+
+  // Neue Anfrage im Mock-Datensatz der Buchungsanfragen ablegen,
+  // damit sie – falls der gebuchte DJ die Demo-DJ-Rolle ist – dort sichtbar wird
+  bookingRequests.unshift({
+    id: state.nextRequestId++,
+    djId: b.djId,
+    requester: "Du",
+    eventType: b.type || "Sonstiges",
+    date: b.date || "2026-07-02",
+    time: b.time,
+    location: "wird noch abgestimmt",
+    message: b.message,
+    status: "offen",
+  });
+  renderDjRequests();
+
+  const dateFormatted = b.date
+    ? new Date(b.date).toLocaleDateString("de-DE", {weekday:"short", day:"2-digit", month:"long"})
+    : "–";
+  document.getElementById("confirmation-summary").innerHTML = `
+    <div class="booking-summary-row"><span class="lbl">DJ</span><span>${dj.name}</span></div>
+    <div class="booking-summary-row"><span class="lbl">Datum</span><span>${dateFormatted}</span></div>
+    <div class="booking-summary-row"><span class="lbl">Uhrzeit</span><span>${b.time} Uhr</span></div>
+    <div class="booking-summary-row"><span class="lbl">Event-Typ</span><span>${b.type || "–"}</span></div>
+  `;
+  closeOverlay("overlay-booking");
+  openOverlay("overlay-confirmation");
+}
+
+function finishBookingFlow(){
+  closeOverlay("overlay-confirmation");
+  closeOverlay("overlay-booking");
+}
+
+/* =======================================================================
+   TAB 2 (Nutzer): FEED & FOLGEN
+   ======================================================================= */
+function renderFollowScroll(){
+  const container = document.getElementById("follow-scroll");
+  container.innerHTML = "";
+  djs.forEach(dj => {
+    const isFollowed = state.followed.has(dj.id);
+    const item = document.createElement("div");
+    item.className = "follow-item" + (isFollowed ? " is-followed" : "");
+    item.innerHTML = `<div class="avatar round" style="background:${dj.color};">${dj.name.split(" ").map(w=>w[0]).join("").slice(0,2)}</div><span>${dj.name}</span>`;
+    item.onclick = () => openDjProfile(dj.id);
+    container.appendChild(item);
+  });
+}
+
+function renderFeed(){
+  const container = document.getElementById("feed-list");
+  const relevant = feedPosts.filter(p => state.followed.has(p.djId));
+  container.innerHTML = "";
+
+  if(relevant.length === 0){
+    container.innerHTML = `<div class="empty-state">
+      <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">${ICONS.heart}</svg>
+      <p>Folge DJs, um ihre Beiträge hier zu sehen.</p>
+    </div>`;
+    return;
+  }
+
+  relevant.forEach(post => {
+    const dj = getDj(post.djId);
+    const el = document.createElement("div");
+    el.className = "post-card";
+    el.innerHTML = `
+      <div class="post-head">
+        <div class="avatar round" style="background:${dj.color};">${dj.name.split(" ").map(w=>w[0]).join("").slice(0,2)}</div>
+        <div class="who"><div class="n">${dj.name}</div><div class="t">${post.time}</div></div>
+      </div>
+      <div class="post-text">${post.text}</div>
+      <div class="post-footer">
+        <span class="likebtn ${post.liked ? 'liked' : ''}" onclick="toggleLike(${post.id})">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="${post.liked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">${ICONS.heart}</svg> ${post.likes}
+        </span>
+      </div>`;
+    el.querySelector(".post-head").onclick = () => openDjProfile(dj.id);
+    container.appendChild(el);
+  });
+}
+
+function toggleLike(postId){
+  const post = feedPosts.find(p => p.id === postId);
+  post.liked = !post.liked;
+  post.likes += post.liked ? 1 : -1;
+  renderFeed();
+}
+
+function toggleFollow(djId){
+  state.followed.has(djId) ? state.followed.delete(djId) : state.followed.add(djId);
+  renderFollowScroll();
+  renderFeed();
+  openDjProfile(djId); // Ansicht mit aktualisiertem Button neu rendern
+}
+
+function openDjProfile(djId){
+  const dj = getDj(djId);
+  const isFollowed = state.followed.has(djId);
+  const upcoming = events.filter(e => e.lineup.includes(dj.name));
+
+  document.getElementById("dj-profile-body").innerHTML = `
+    <div class="profile-hero">
+      <div class="avatar round" style="background:${dj.color};">${dj.name.split(" ").map(w=>w[0]).join("").slice(0,2)}</div>
+      <h3>${dj.name}</h3>
+      <div class="genre">${dj.city}</div>
+      <div class="stat-row">
+        <div class="stat"><div class="num">${formatFollowers(dj.followers + (isFollowed?1:0))}</div><div class="lbl">Follower</div></div>
+        <div class="stat"><div class="num">${dj.rating} ★</div><div class="lbl">Bewertung</div></div>
+      </div>
+      <div class="tag-row">${dj.genres.map(g => `<span class="tag">${g}</span>`).join("")}</div>
+      <button class="btn ${isFollowed ? 'btn-outline followed' : 'btn-primary'}" style="margin-top:14px;" onclick="toggleFollow(${dj.id})">
+        ${isFollowed ? '✓ Gefolgt' : '+ Folgen'}
+      </button>
+    </div>
+
+    <div class="info-block"><h4>Bio</h4><p style="font-size:13.5px; line-height:1.5; margin:0;">${dj.bio}</p></div>
+
+    <div class="info-block">
+      <h4>Kommende Gigs</h4>
+      ${upcoming.length ? upcoming.map(e => `
+        <div class="gig-item">
+          <div class="gig-date-box"><div class="d">${e.dayLabel}</div><div class="m">${e.time}</div></div>
+          <div style="flex:1;"><div style="font-size:13px; font-weight:600;">${e.name}</div><div style="font-size:11px; color:var(--text-muted);">${e.location}, ${e.city}</div></div>
+        </div>`).join("") : `<p class="subtle-text" style="margin:0;">Aktuell keine geplanten Gigs.</p>`}
+    </div>
+
+    <div class="info-block">
+      <h4>Mixes</h4>
+      ${dj.mixes.map(m => `
+        <div class="mix-item">
+          <div class="mix-play"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">${ICONS.play}</svg></div>
+          <div style="flex:1;"><div style="font-size:13px; font-weight:600;">${m.title}</div><div style="font-size:11px; color:var(--text-muted);">${m.duration}</div></div>
+        </div>`).join("")}
+    </div>
+  `;
+  openOverlay("overlay-dj-profile");
+}
+
+/* =======================================================================
+   TAB 3: PARTY-KARTE
+   ======================================================================= */
+function renderMap(){
+  const canvas = document.getElementById("map-canvas");
+  canvas.innerHTML = "";
+  const selfDjName = getDj(state.loggedInDjId).name;
+
+  events.forEach(ev => {
+    const isMine = ev.lineup.includes(selfDjName);
+    const pin = document.createElement("div");
+    pin.className = "map-pin" + (isMine ? " mine" : "");
+    pin.style.left = ev.x + "%";
+    pin.style.top = ev.y + "%";
+    pin.innerHTML = `<div class="dot"><svg width="14" height="14" viewBox="0 0 24 24" fill="#0b0710">${ICONS.location}</svg></div>`;
+    pin.onclick = () => openEventDetail(ev.id);
+    canvas.appendChild(pin);
+  });
+}
+
+function renderTonightList(){
+  const container = document.getElementById("tonight-list");
+  const tonight = events.filter(e => e.dayLabel === "Heute");
+  container.innerHTML = "";
+  tonight.forEach(ev => {
+    const el = document.createElement("div");
+    el.className = "event-card";
+    el.onclick = () => openEventDetail(ev.id);
+    el.innerHTML = `
+      <div class="event-time-box"><div class="day">${ev.dayLabel}</div><div class="time">${ev.time}</div></div>
+      <div class="event-info">
+        <div class="n">${ev.name}</div>
+        <div class="loc"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ICONS.location}</svg>${ev.location}, ${ev.city}</div>
+        <div class="lineup">${ev.lineup.join(" · ")}</div>
+      </div>`;
+    container.appendChild(el);
+  });
+}
+
+function openEventDetail(id){
+  const ev = events.find(e => e.id === id);
+  document.getElementById("event-detail-body").innerHTML = `
+    <div class="info-block">
+      <h4>${ev.name}</h4>
+      <div class="request-details" style="margin-bottom:0;">
+        <div><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ICONS.location}</svg> ${ev.location}, ${ev.city}</div>
+        <div><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ICONS.clock}</svg> ${ev.dayLabel}, ${ev.time} Uhr</div>
+      </div>
+    </div>
+    <div class="info-block">
+      <h4>Lineup</h4>
+      ${ev.lineup.map(name => {
+        const dj = djs.find(d => d.name === name);
+        return `<div class="mix-item">
+          <div class="avatar round" style="width:34px;height:34px;font-size:11px;background:${dj ? dj.color : '#444'};">${name.split(" ").map(w=>w[0]).join("").slice(0,2)}</div>
+          <div style="flex:1; font-size:13.5px; font-weight:600;">${name}</div>
+        </div>`;
+      }).join("")}
+    </div>
+    <div class="info-block" style="display:flex; justify-content:space-between; align-items:center;">
+      <span class="subtle-text">Eintritt</span><span class="price-tag" style="font-size:16px;">${ev.entry} €</span>
+    </div>
+  `;
+  openOverlay("overlay-event-detail");
+}
+
+/* =======================================================================
+   TAB 1 (DJ-Rolle): BUCHUNGSANFRAGEN
+   ======================================================================= */
+function renderDjRequests(){
+  document.getElementById("loggedin-dj-name-1").textContent = getDj(state.loggedInDjId).name;
+  const container = document.getElementById("request-list");
+  const myRequests = bookingRequests.filter(r => r.djId === state.loggedInDjId);
+  container.innerHTML = "";
+
+  if(myRequests.length === 0){
+    container.innerHTML = `<div class="empty-state">
+      <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">${ICONS.inbox}</svg>
+      <p>Noch keine Buchungsanfragen erhalten.</p>
+    </div>`;
+    return;
+  }
+
+  myRequests.forEach(req => {
+    const dateFormatted = new Date(req.date).toLocaleDateString("de-DE", {day:"2-digit", month:"2-digit", year:"numeric"});
+    const el = document.createElement("div");
+    el.className = "request-card";
+    el.innerHTML = `
+      <div class="request-top">
+        <span class="n">${req.requester}</span>
+        <span class="status-badge ${req.status}">${req.status === "bestaetigt" ? "Bestätigt" : req.status === "abgelehnt" ? "Abgelehnt" : "Offen"}</span>
+      </div>
+      <div class="request-details">
+        <div><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ICONS.clock}</svg> ${req.eventType} · ${dateFormatted}, ${req.time} Uhr</div>
+        <div><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ICONS.location}</svg> ${req.location}</div>
+        ${req.message ? `<div>„${req.message}“</div>` : ""}
+      </div>
+      ${req.status === "offen" ? `
+        <div class="btn-row">
+          <button class="btn btn-success btn-sm" style="flex:1;" onclick="updateRequestStatus(${req.id}, 'bestaetigt')">Annehmen</button>
+          <button class="btn btn-danger btn-sm" style="flex:1;" onclick="updateRequestStatus(${req.id}, 'abgelehnt')">Ablehnen</button>
+        </div>` : ``}
+    `;
+    container.appendChild(el);
+  });
+}
+
+function updateRequestStatus(id, status){
+  const req = bookingRequests.find(r => r.id === id);
+  req.status = status;
+  renderDjRequests();
+  showToast(status === "bestaetigt" ? "Anfrage bestätigt ✓" : "Anfrage abgelehnt");
+}
+
+/* =======================================================================
+   TAB 2 (DJ-Rolle): MEIN PROFIL
+   ======================================================================= */
+function renderSelfProfile(){
+  const dj = getDj(state.loggedInDjId);
+  document.getElementById("dj-self-avatar").style.background = dj.color;
+  document.getElementById("dj-self-avatar").textContent = dj.name.split(" ").map(w=>w[0]).join("").slice(0,2);
+  document.getElementById("dj-self-name").textContent = dj.name;
+  document.getElementById("dj-self-genre").textContent = dj.genres.join(" · ") + " · " + dj.city;
+  document.getElementById("dj-self-followers").textContent = formatFollowers(dj.followers);
+  document.getElementById("dj-self-rating").textContent = dj.rating + " ★";
+  document.getElementById("dj-self-price").textContent = dj.price;
+  document.getElementById("edit-bio").value = dj.bio;
+  document.getElementById("edit-price").value = dj.price;
+  renderSelfGigs();
+}
+
+// Live-Übernahme von Bio & Preis aus dem Bearbeiten-Formular in die Mock-Daten
+function updateSelfProfile(){
+  const dj = getDj(state.loggedInDjId);
+  dj.bio = document.getElementById("edit-bio").value;
+  dj.price = Number(document.getElementById("edit-price").value) || dj.price;
+  document.getElementById("dj-self-price").textContent = dj.price;
+}
+
+function renderSelfGigs(){
+  const dj = getDj(state.loggedInDjId);
+  const upcoming = events.filter(e => e.lineup.includes(dj.name));
+  const container = document.getElementById("dj-self-gigs");
+  container.innerHTML = upcoming.length ? upcoming.map(e => `
+    <div class="gig-item">
+      <div class="gig-date-box"><div class="d">${e.dayLabel}</div><div class="m">${e.time}</div></div>
+      <div style="flex:1;"><div style="font-size:13px; font-weight:600;">${e.name}</div><div style="font-size:11px; color:var(--text-muted);">${e.location}, ${e.city}</div></div>
+    </div>`).join("") : `<p class="subtle-text">Aktuell keine geplanten Gigs.</p>`;
+}
+
+function postAnnouncement(){
+  const textarea = document.getElementById("new-post-text");
+  const text = textarea.value.trim();
+  if(!text) return;
+
+  feedPosts.unshift({ id: state.nextPostId++, djId: state.loggedInDjId, text, time: "gerade eben", likes: 0, liked: false });
+  textarea.value = "";
+  renderFeed();
+  showToast("Beitrag veröffentlicht ✓");
+}
+
+/* =======================================================================
+   TOAST-HINWEIS
+   ======================================================================= */
+let toastTimer;
+function showToast(msg){
+  const toast = document.getElementById("toast");
+  toast.textContent = msg;
+  toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 2200);
+}
+
+init();
+</script>
+</body>
+</html>
