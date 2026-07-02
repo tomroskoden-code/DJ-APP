@@ -26,6 +26,22 @@
     --radius-sm: 10px;
   }
 
+  /* Light-Theme: gleiche Neon-Markenfarben, aber helle, freundliche Flächen & dunkle Schrift.
+     Wird über [data-theme="light"] auf dem .phone-Element aktiviert (siehe setTheme()). */
+  .phone[data-theme="light"]{
+    --bg-app: #f5f2fa;
+    --bg-elevated: #ffffff;
+    --bg-card: #ffffff;
+    --bg-card-hover: #f1ecf9;
+    --border-subtle: #e1dbee;
+    --text-primary: #221a30;
+    --text-secondary: #5d5470;
+    --text-muted: #8a819a;
+    --success: #0f9d63;
+    --danger: #d92655;
+    --warning: #b8790a;
+  }
+
   *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html,body{ height:100%; }
   body{
@@ -46,12 +62,15 @@
     height:844px;
     max-height:100vh;
     background: var(--bg-app);
+    color: var(--text-primary);
     position:relative;
     overflow:hidden;
     display:flex;
     flex-direction:column;
     box-shadow: 0 0 0 10px #050308, 0 0 60px rgba(138,63,252,0.35);
+    transition: background-color .3s ease;
   }
+  .phone, .phone *{ transition: background-color .25s ease, border-color .25s ease, color .25s ease; }
   @media (min-width: 440px){
     .phone{ border-radius:44px; margin: 20px 0; }
   }
@@ -81,6 +100,9 @@
     color:transparent;
   }
   .logo span{ font-weight:400; color: var(--text-secondary); -webkit-text-fill-color: var(--text-secondary); }
+
+  /* Container für Rollen-Switcher + Einstellungen-Icon, damit der Header zweispaltig bleibt */
+  .header-actions{ display:flex; align-items:center; gap:8px; }
 
   /* Rollen-Switcher im Header */
   .role-switch{
@@ -455,6 +477,7 @@
     border-top:1px solid var(--border-subtle);
     padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
   }
+  .phone[data-theme="light"] .bottom-nav{ background: rgba(255,255,255,0.92); }
   .nav-btn{
     flex:1;
     background:transparent;
@@ -554,13 +577,17 @@
 
   /* ===================== Chat ===================== */
   .chat-messages{ flex:1 1 auto; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:10px; }
-  .chat-bubble{ max-width:75%; padding:10px 13px; border-radius:16px; font-size:13.5px; line-height:1.4; }
-  .chat-bubble.theirs{
-    align-self:flex-start; background: var(--bg-card); border:1px solid var(--border-subtle);
+  .chat-row{ display:flex; align-items:flex-end; gap:8px; max-width:100%; }
+  .chat-row.theirs{ align-self:flex-start; }
+  .chat-row.mine{ align-self:flex-end; flex-direction:row-reverse; }
+  .chat-row .avatar{ width:26px; height:26px; font-size:11px; flex:0 0 auto; }
+  .chat-bubble{ max-width:100%; padding:10px 13px; border-radius:16px; font-size:13.5px; line-height:1.4; }
+  .chat-row.theirs .chat-bubble{
+    background: var(--bg-card); border:1px solid var(--border-subtle);
     border-bottom-left-radius:4px;
   }
-  .chat-bubble.mine{
-    align-self:flex-end; color:#fff; border-bottom-right-radius:4px;
+  .chat-row.mine .chat-bubble{
+    color:#fff; border-bottom-right-radius:4px;
     background: linear-gradient(135deg, var(--neon-magenta), var(--neon-violet));
   }
   .chat-bubble .time{ display:block; font-size:10px; opacity:0.65; margin-top:5px; }
@@ -632,18 +659,71 @@
     padding:10px 16px; background: rgba(51,230,160,0.08); border-bottom:1px solid var(--border-subtle);
     font-size:12px; color: var(--text-secondary);
   }
+
+  /* ===================== Profileinstellungen: Avatar-Galerie ===================== */
+  .avatar-gallery{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:14px 0 20px; }
+  .avatar-gallery .avatar-option{
+    width:100%; aspect-ratio:1; border-radius:50%; border:2px solid transparent;
+    display:flex; align-items:center; justify-content:center; font-size:20px; padding:0;
+  }
+  .avatar-gallery .avatar-option.selected{ border-color: var(--neon-cyan); box-shadow:0 0 10px rgba(46,242,255,0.5); }
+  .avatar-gallery .avatar-option:active{ transform: scale(0.92); }
+
+  /* ===================== Story-Formular: Hintergrund-Farbverlauf-Auswahl ===================== */
+  .color-swatch-row{ display:flex; flex-wrap:wrap; gap:10px; }
+  .color-swatch{ width:38px; height:38px; border-radius:10px; border:2px solid transparent; padding:0; }
+  .color-swatch.selected{ border-color:#fff; box-shadow:0 0 0 2px var(--neon-cyan); }
+  .color-swatch:active{ transform: scale(0.9); }
+
+  /* ===================== Story-Ring in der Follow-Leiste ===================== */
+  .follow-item.has-story-unseen .avatar{ border-color: var(--neon-magenta); box-shadow:0 0 10px rgba(255,46,230,0.55); }
+  .follow-item.has-story-seen .avatar{ border-color: var(--text-muted); box-shadow:none; }
+
+  /* ===================== Story-Viewer (Vollbild) ===================== */
+  #overlay-story-viewer{ background:#000; }
+  .story-progress-row{ display:flex; gap:4px; padding:10px 12px 0; flex:0 0 auto; }
+  .story-progress-seg{ flex:1; height:3px; border-radius:3px; background:rgba(255,255,255,0.3); overflow:hidden; }
+  .story-progress-seg .fill{ display:block; height:100%; width:0%; background:#fff; }
+  .story-progress-seg .fill.done{ width:100%; }
+  @keyframes storyFill{ from{ width:0%; } to{ width:100%; } }
+  .story-header{ position:relative; z-index:2; display:flex; align-items:center; gap:10px; padding:10px 14px; flex:0 0 auto; }
+  .story-header .avatar{ border:1.5px solid rgba(255,255,255,0.4); }
+  .story-dj-name{ flex:1; color:#fff; font-weight:700; font-size:13.5px; }
+  .story-time{ color:rgba(255,255,255,0.7); font-size:11px; }
+  .story-close-btn{
+    background:rgba(255,255,255,0.15); border:none; color:#fff;
+    width:30px; height:30px; border-radius:50%; font-size:15px; flex:0 0 auto;
+  }
+  .story-close-btn:active{ transform: scale(0.9); }
+  .story-content{
+    position:relative; flex:1; display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:16px; padding:30px; text-align:center;
+  }
+  .story-tap-zone{ position:absolute; top:0; bottom:0; width:35%; z-index:1; }
+  .story-tap-zone.left{ left:0; }
+  .story-tap-zone.right{ right:0; }
+  .story-emoji{ font-size:64px; position:relative; z-index:2; }
+  .story-text{
+    position:relative; z-index:2; color:#fff; font-size:16px; font-weight:600;
+    line-height:1.5; max-width:280px; text-shadow:0 2px 10px rgba(0,0,0,0.45);
+  }
 </style>
 </head>
 <body>
 
-<div class="phone">
+<div class="phone" id="app-phone" data-theme="dark">
 
   <!-- ===================== Header mit Rollen-Switcher ===================== -->
   <header class="app-header">
     <div class="logo">Beat<span>Spot</span></div>
-    <div class="role-switch">
-      <button id="role-btn-user" class="active" onclick="setRole('user')">🎉 Partygänger</button>
-      <button id="role-btn-dj" onclick="setRole('dj')">🎧 DJ</button>
+    <div class="header-actions">
+      <div class="role-switch">
+        <button id="role-btn-user" class="active" onclick="setRole('user')">🎉 Partygänger</button>
+        <button id="role-btn-dj" onclick="setRole('dj')">🎧 DJ</button>
+      </div>
+      <button class="icon-btn" onclick="openSettingsOverlay()" title="Profileinstellungen">
+        <svg id="settings-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+      </button>
     </div>
   </header>
 
@@ -755,16 +835,15 @@
       </div>
 
       <div class="info-block">
-        <h4>Profil bearbeiten</h4>
-        <div class="form-group">
-          <label>Bio</label>
-          <textarea id="edit-bio" oninput="updateSelfProfile()"></textarea>
-        </div>
+        <h4>Preis pro Stunde</h4>
+        <p class="subtle-text" style="margin-top:-4px;">Name, Bio und Profilbild änderst du in den Profileinstellungen (Zahnrad-Icon oben rechts).</p>
         <div class="form-group" style="margin-bottom:0;">
           <label>Preis pro Stunde (€)</label>
           <input type="number" id="edit-price" min="0" step="5" oninput="updateSelfProfile()">
         </div>
       </div>
+
+      <button class="btn btn-outline" style="margin-bottom:16px;" onclick="openAddStoryForm()">📸 Story hinzufügen</button>
 
       <div class="post-composer">
         <h4 style="margin:0 0 10px; font-size:13px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px;">Neuen Beitrag / Gig ankündigen</h4>
@@ -1058,6 +1137,58 @@
       <div class="overlay-body" id="location-detail-body"></div>
     </section>
 
+    <!-- ===================== OVERLAY: Profileinstellungen ===================== -->
+    <section class="overlay" id="overlay-settings">
+      <div class="overlay-header">
+        <button class="back-btn" onclick="closeOverlay('overlay-settings')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <h2>Profileinstellungen</h2>
+      </div>
+      <div class="overlay-body" id="settings-body"></div>
+    </section>
+
+    <!-- ===================== OVERLAY: Story hinzufügen (DJ) ===================== -->
+    <section class="overlay" id="overlay-add-story">
+      <div class="overlay-header">
+        <button class="back-btn" onclick="closeOverlay('overlay-add-story')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <h2>Story hinzufügen</h2>
+      </div>
+      <div class="overlay-body">
+        <div class="form-group">
+          <label>Text</label>
+          <textarea id="story-form-text" placeholder="Was gibt's Neues?"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Hintergrund</label>
+          <div class="color-swatch-row" id="story-bg-row"></div>
+        </div>
+        <div class="form-group">
+          <label>Emoji</label>
+          <div class="chip-row" id="story-emoji-row"></div>
+        </div>
+        <button class="btn btn-primary" onclick="submitStory()">Story posten</button>
+      </div>
+    </section>
+
+    <!-- ===================== OVERLAY: Story-Viewer (Vollbild) ===================== -->
+    <section class="overlay" id="overlay-story-viewer">
+      <div class="story-progress-row" id="story-progress-row"></div>
+      <div class="story-header">
+        <div class="avatar round" id="story-avatar"></div>
+        <div class="story-dj-name" id="story-dj-name"></div>
+        <div class="story-time" id="story-time"></div>
+        <button class="story-close-btn" onclick="closeStoryViewer()">✕</button>
+      </div>
+      <div class="story-content" id="story-content">
+        <div class="story-tap-zone left" onclick="storyPrev()"></div>
+        <div class="story-tap-zone right" onclick="storyNext()"></div>
+        <div id="story-slide-body"></div>
+      </div>
+    </section>
+
   </main>
 
   <!-- Schwebender Button für die DJ-Rolle: spontanes Event ankündigen -->
@@ -1103,6 +1234,7 @@ const ICONS = {
   play: '<polygon points="5 3 19 12 5 21 5 3"/>',
   users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
   home: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
 };
 
 // 6 DJs mit realistischen Beispieldaten
@@ -1111,7 +1243,7 @@ const ICONS = {
 const djs = [
   { id: 1, name: "DJ Nova", genre: "Techno", genres: ["Techno", "House"], price: 120, rating: 4.8, city: "Berlin",
     color: "linear-gradient(135deg,#ff2ee6,#8a3ffc)", available: true, isPro: false, sponsored: false,
-    blockedDates: ["2026-07-10", "2026-07-11", "2026-07-25"],
+    blockedDates: ["2026-07-10", "2026-07-11", "2026-07-25"], avatarEmoji: null,
     bio: "DJ Nova bringt seit über 8 Jahren Clubs in Berlin und ganz Europa zum Beben. Bekannt für treibende Techno-Sets mit hypnotischen Synth-Layern.",
     followers: 12400,
     mixes: [{title:"Warehouse Session Vol. 4", duration:"58 Min"}, {title:"Midnight Drive", duration:"42 Min"}],
@@ -1123,7 +1255,7 @@ const djs = [
     ] },
   { id: 2, name: "Luna Beats", genre: "House", genres: ["House", "Deep House"], price: 95, rating: 4.6, city: "Hamburg",
     color: "linear-gradient(135deg,#2ef2ff,#8a3ffc)", available: true, isPro: false, sponsored: false,
-    blockedDates: ["2026-07-15"],
+    blockedDates: ["2026-07-15"], avatarEmoji: null,
     bio: "Luna Beats steht für warme House-Grooves und sonnige Rooftop-Vibes. Ihre Sets sind der perfekte Soundtrack für laue Sommernächte.",
     followers: 8700,
     mixes: [{title:"Rooftop Sunset Mix", duration:"63 Min"}],
@@ -1134,7 +1266,7 @@ const djs = [
     ] },
   { id: 3, name: "MC Solstice", genre: "Hip-Hop", genres: ["Hip-Hop", "Rap"], price: 110, rating: 4.9, city: "München",
     color: "linear-gradient(135deg,#ffb020,#ff2ee6)", available: false, isPro: false, sponsored: false,
-    blockedDates: [],
+    blockedDates: [], avatarEmoji: null,
     bio: "MC Solstice verbindet Old-School-Hip-Hop mit aktuellen Rap-Hits und bringt garantiert jede Crowd zum Mitsingen.",
     followers: 15600,
     mixes: [{title:"Backstage Anthems", duration:"50 Min"}, {title:"Old School Classics", duration:"71 Min"}],
@@ -1146,7 +1278,7 @@ const djs = [
     ] },
   { id: 4, name: "Electra Vibe", genre: "EDM", genres: ["EDM", "Electro"], price: 140, rating: 4.7, city: "Köln",
     color: "linear-gradient(135deg,#8a3ffc,#2ef2ff)", available: true, isPro: false, sponsored: true,
-    blockedDates: [],
+    blockedDates: [], avatarEmoji: null,
     bio: "Electra Vibe liefert bombastische EDM-Drops und energiegeladene Bühnenshows für Festivals und große Clubnächte.",
     followers: 21300,
     mixes: [{title:"Festival Anthem Set", duration:"55 Min"}],
@@ -1157,7 +1289,7 @@ const djs = [
     ] },
   { id: 5, name: "DJ Kalypso", genre: "Latin", genres: ["Latin", "Reggaeton"], price: 90, rating: 4.5, city: "Frankfurt",
     color: "linear-gradient(135deg,#33e6a0,#2ef2ff)", available: true, isPro: false, sponsored: true,
-    blockedDates: [],
+    blockedDates: [], avatarEmoji: null,
     bio: "DJ Kalypso bringt karibisches Flair nach Deutschland – Reggaeton, Latin-Pop und Salsa für die perfekte Tanzfläche.",
     followers: 6300,
     mixes: [{title:"Fiesta Latina Mix", duration:"47 Min"}],
@@ -1168,7 +1300,7 @@ const djs = [
     ] },
   { id: 6, name: "Nightshade", genre: "Dark Techno", genres: ["Techno", "Industrial"], price: 130, rating: 4.9, city: "Berlin",
     color: "linear-gradient(135deg,#6f6484,#ff2ee6)", available: false, isPro: false, sponsored: false,
-    blockedDates: [],
+    blockedDates: [], avatarEmoji: null,
     bio: "Nightshade steht für rohe, düstere Techno-Sounds und intensive Warehouse-Atmosphäre. Nichts für schwache Nerven.",
     followers: 18900,
     mixes: [{title:"Industrial Nights", duration:"66 Min"}, {title:"Bunker Tapes", duration:"39 Min"}],
@@ -1191,6 +1323,24 @@ const feedAd = {
 // Verfügbare Ausstattungs-Optionen für private Locations
 const LOCATION_AMENITIES = ["Soundanlage", "Garten", "Parkplätze", "Pool", "Bühne", "Dachterrasse"];
 
+// Profilbild-Galerie: Kombination aus Farbverlauf + Emoji, wählbar in den Profileinstellungen
+const AVATAR_PRESETS = [
+  { color: "linear-gradient(135deg,#ff2ee6,#8a3ffc)", emoji: "🎧" },
+  { color: "linear-gradient(135deg,#2ef2ff,#8a3ffc)", emoji: "🎶" },
+  { color: "linear-gradient(135deg,#ffb020,#ff2ee6)", emoji: "🔥" },
+  { color: "linear-gradient(135deg,#33e6a0,#2ef2ff)", emoji: "🕺" },
+  { color: "linear-gradient(135deg,#8a3ffc,#2ef2ff)", emoji: "💃" },
+  { color: "linear-gradient(135deg,#6f6484,#ff2ee6)", emoji: "🌙" },
+  { color: "linear-gradient(135deg,#ff2ee6,#33e6a0)", emoji: "⚡" },
+  { color: "linear-gradient(135deg,#ffb020,#8a3ffc)", emoji: "🌟" },
+  { color: "linear-gradient(135deg,#2ef2ff,#ff2ee6)", emoji: "🦄" },
+  { color: "linear-gradient(135deg,#33e6a0,#ffb020)", emoji: "🎉" },
+];
+
+// Farbverläufe & Emojis zur Auswahl beim Erstellen einer Story
+const STORY_BACKGROUNDS = AVATAR_PRESETS.slice(0, 6).map(p => p.color);
+const STORY_EMOJIS = ["🎧", "🔥", "🎉", "🌙", "⚡", "🕺", "💃", "🌟"];
+
 // Private Locations, die Nutzer als Party-Location anbieten (isMine: vom Demo-Nutzer selbst angelegt)
 let privateLocations = [
   { id: 1, name: "Dachterrasse Mitte", owner: "Jonas W.", address: "Torstraße 12, Berlin", capacity: 40,
@@ -1212,6 +1362,24 @@ const events = [
   { id: 4, name: "Latin Fever", location: "Club Havanna", city: "Frankfurt", dayLabel: "Heute", time: "23:30", lineup: ["DJ Kalypso"], entry: 12, x: 78, y: 72 },
   { id: 5, name: "Dark Matter", location: "Bunker Club", city: "Köln", dayLabel: "Sa", time: "00:00", lineup: ["Nightshade", "Electra Vibe"], entry: 18, x: 14, y: 68 },
 ];
+
+// Stories je DJ-ID (hoursAgo: simulierte Stunden seit Veröffentlichung, aktiv solange < 24)
+let storiesByDj = {
+  1: [
+    { id: 1, text: "Warmup läuft, gleich geht's los! 🔥", background: "linear-gradient(135deg,#ff2ee6,#8a3ffc)", emoji: "🎧", hoursAgo: 3, seen: false },
+  ],
+  2: [
+    { id: 2, text: "Sound-Check für den Rooftop-Gig ☀️", background: "linear-gradient(135deg,#2ef2ff,#8a3ffc)", emoji: "🌅", hoursAgo: 6, seen: false },
+  ],
+  4: [
+    { id: 3, text: "Bühne ist bereit! 🎆", background: "linear-gradient(135deg,#8a3ffc,#2ef2ff)", emoji: "🎆", hoursAgo: 10, seen: false },
+    { id: 4, text: "Noch 2 Stunden bis Showtime!", background: "linear-gradient(135deg,#ffb020,#ff2ee6)", emoji: "⏰", hoursAgo: 9, seen: false },
+  ],
+  6: [
+    { id: 5, text: "Dark Vibes only tonight 🖤", background: "linear-gradient(135deg,#6f6484,#ff2ee6)", emoji: "🌑", hoursAgo: 2, seen: false },
+  ],
+};
+let nextStoryId = 6;
 
 // Feed-Posts der DJs
 let feedPosts = [
@@ -1267,10 +1435,55 @@ const state = {
   selectedLocationAmenities: new Set(),
   reviewTargetDjId: null,
   newReviewStars: 0,
+  theme: "dark",                  // "dark" oder "light", siehe setTheme()
+  notificationsEnabled: true,     // rein simulierter Schalter ohne echte Push-Logik
+  userDisplayName: "Du",          // Anzeigename der Partygänger-Demo-Persona
+  userBio: "",
+  userAvatar: { color: "linear-gradient(135deg,#2ef2ff,#33e6a0)", emoji: "🙂" },
+  newStoryBackground: null,
+  newStoryEmoji: null,
+  storyViewer: { djId: null, stories: [], index: 0 },
+  storyTimer: null,
 };
 
 function getDj(id){ return djs.find(d => d.id === id); }
 function formatFollowers(n){ return n >= 1000 ? (n/1000).toFixed(1).replace(".0","") + "k" : n; }
+
+/* =======================================================================
+   AVATAR-HILFSFUNKTIONEN (Farbverlauf + Emoji/Initialen, siehe Profileinstellungen)
+   ======================================================================= */
+function avatarBg(dj){ return dj ? dj.color : "#444"; }
+
+// Liefert den Inhalt (Emoji oder Initialen) für die Avatar-Anzeige eines DJs.
+// fallbackName wird genutzt, wenn kein DJ-Objekt gefunden wurde (z.B. bei Lineup-Namen).
+function avatarContent(dj, fallbackName){
+  if(dj && dj.avatarEmoji) return dj.avatarEmoji;
+  return initialsFromName(dj ? dj.name : fallbackName);
+}
+function initialsFromName(name){
+  return (name || "").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+}
+
+// Ersetzt den internen Platzhalter "Du" durch den in den Einstellungen gewählten Anzeigenamen
+function displayName(raw){
+  return raw === "Du" ? state.userDisplayName : raw;
+}
+
+// Deterministische Farbe für Mock-Personen ohne eigenes Avatar-Objekt (z.B. Bewertungen anderer Nutzer)
+const AVATAR_FALLBACK_COLORS = AVATAR_PRESETS.map(p => p.color);
+function pseudoAvatarColor(name){
+  let hash = 0;
+  for(let i = 0; i < name.length; i++){ hash = name.charCodeAt(i) + ((hash << 5) - hash); }
+  return AVATAR_FALLBACK_COLORS[Math.abs(hash) % AVATAR_FALLBACK_COLORS.length];
+}
+
+// Baut das Avatar-HTML für eine Bewertung: eigene Avatar-Wahl bei "Du", sonst deterministische Pseudo-Farbe
+function reviewerAvatarHTML(r){
+  if(r.name === "Du"){
+    return `<div class="avatar round" style="width:32px;height:32px;font-size:12px;background:${state.userAvatar.color};">${state.userAvatar.emoji || initialsFromName(state.userDisplayName)}</div>`;
+  }
+  return `<div class="avatar round" style="width:32px;height:32px;font-size:12px;background:${pseudoAvatarColor(r.name)};">${initialsFromName(r.name)}</div>`;
+}
 
 // Ist der eingeloggte Demo-DJ Pro-Mitglied? Dann ist die App für ihn werbefrei.
 function isAdFreeActive(){ return getDj(state.loggedInDjId).isPro === true; }
@@ -1340,6 +1553,18 @@ function init(){
     starBtn.onclick = () => selectReviewStars(i);
     starPicker.appendChild(starBtn);
   }
+
+  // Zahnrad-Icon im Header setzen
+  document.getElementById("settings-icon").innerHTML = ICONS.gear;
+
+  // Wischgeste im Story-Viewer: links/rechts wischen wechselt die Story
+  let storyTouchStartX = 0;
+  const storyContent = document.getElementById("story-content");
+  storyContent.addEventListener("touchstart", e => { storyTouchStartX = e.changedTouches[0].screenX; });
+  storyContent.addEventListener("touchend", e => {
+    const dx = e.changedTouches[0].screenX - storyTouchStartX;
+    if(Math.abs(dx) > 50){ dx < 0 ? storyNext() : storyPrev(); }
+  });
 
   renderDjList();
   renderFollowScroll();
@@ -1474,7 +1699,7 @@ function buildDjCard(dj, isAd){
   card.className = "dj-card" + (isAd ? " sponsored" : "");
   card.onclick = () => openDjDetail(dj.id);
   card.innerHTML = `
-    <div class="avatar" style="background:${dj.color};">${dj.name.split(" ").map(w=>w[0]).join("").slice(0,2)}</div>
+    <div class="avatar" style="background:${avatarBg(dj)};">${avatarContent(dj)}</div>
     <div class="dj-card-info">
       <div class="name">${dj.name}
         ${dj.isPro ? '<span class="badge-pro">PRO</span>' : ''}
@@ -1494,7 +1719,7 @@ function openDjDetail(id){
   const body = document.getElementById("dj-detail-body");
   body.innerHTML = `
     <div class="profile-hero">
-      <div class="avatar round" style="background:${dj.color};">${dj.name.split(" ").map(w=>w[0]).join("").slice(0,2)}</div>
+      <div class="avatar round" style="background:${avatarBg(dj)};">${avatarContent(dj)}</div>
       <h3>${dj.name}</h3>
       <div class="genre">${dj.city}</div>
       <div class="stat-row">
@@ -1705,10 +1930,21 @@ function renderFollowScroll(){
   container.innerHTML = "";
   djs.forEach(dj => {
     const isFollowed = state.followed.has(dj.id);
+    const activeStories = getActiveStories(dj.id);
+
+    // Ring-Zustand: ungesehene Story > gesehene Story > gefolgt > Standard
+    let ringClass = "";
+    if(activeStories.length > 0 && activeStories.some(s => !s.seen)) ringClass = " has-story-unseen";
+    else if(activeStories.length > 0) ringClass = " has-story-seen";
+    else if(isFollowed) ringClass = " is-followed";
+
     const item = document.createElement("div");
-    item.className = "follow-item" + (isFollowed ? " is-followed" : "");
-    item.innerHTML = `<div class="avatar round" style="background:${dj.color};">${dj.name.split(" ").map(w=>w[0]).join("").slice(0,2)}</div><span>${dj.name}</span>`;
-    item.onclick = () => openDjProfile(dj.id);
+    item.className = "follow-item" + ringClass;
+    item.innerHTML = `<div class="avatar round" style="background:${avatarBg(dj)};">${avatarContent(dj)}</div><span>${dj.name}</span>`;
+    item.onclick = () => {
+      if(activeStories.length > 0) openStoryViewer(dj.id);
+      else openDjProfile(dj.id);
+    };
     container.appendChild(item);
   });
 }
@@ -1744,7 +1980,7 @@ function buildPostCard(post){
   el.className = "post-card";
   el.innerHTML = `
     <div class="post-head">
-      <div class="avatar round" style="background:${dj.color};">${dj.name.split(" ").map(w=>w[0]).join("").slice(0,2)}</div>
+      <div class="avatar round" style="background:${avatarBg(dj)};">${avatarContent(dj)}</div>
       <div class="who"><div class="n">${dj.name}</div><div class="t">${post.time}</div></div>
     </div>
     <div class="post-text">${post.text}</div>
@@ -1791,7 +2027,7 @@ function openDjProfile(djId){
 
   document.getElementById("dj-profile-body").innerHTML = `
     <div class="profile-hero">
-      <div class="avatar round" style="background:${dj.color};">${dj.name.split(" ").map(w=>w[0]).join("").slice(0,2)}</div>
+      <div class="avatar round" style="background:${avatarBg(dj)};">${avatarContent(dj)}</div>
       <h3>${dj.name}</h3>
       <div class="genre">${dj.city}</div>
       <div class="stat-row">
@@ -1946,7 +2182,7 @@ function openEventDetail(id){
       ${ev.lineup.map(name => {
         const dj = djs.find(d => d.name === name);
         return `<div class="mix-item">
-          <div class="avatar round" style="width:34px;height:34px;font-size:11px;background:${dj ? dj.color : '#444'};">${name.split(" ").map(w=>w[0]).join("").slice(0,2)}</div>
+          <div class="avatar round" style="width:34px;height:34px;font-size:11px;background:${avatarBg(dj)};">${avatarContent(dj, name)}</div>
           <div style="flex:1; font-size:13.5px; font-weight:600;">${name}</div>
         </div>`;
       }).join("")}
@@ -1981,7 +2217,7 @@ function renderDjRequests(){
     el.className = "request-card";
     el.innerHTML = `
       <div class="request-top">
-        <span class="n">${req.requester}</span>
+        <span class="n">${displayName(req.requester)}</span>
         <span class="status-badge ${req.status}">${req.status === "bestaetigt" ? "Bestätigt" : req.status === "abgelehnt" ? "Abgelehnt" : "Offen"}</span>
       </div>
       <div class="request-details">
@@ -1990,7 +2226,7 @@ function renderDjRequests(){
         ${req.message ? `<div>„${req.message}“</div>` : ""}
       </div>
       <div class="btn-row" style="margin-bottom:${req.status === "offen" ? "8px" : "0"};">
-        <button class="btn btn-outline btn-sm" style="flex:1;" onclick="openChat(${req.id})">💬 Chat mit ${req.requester}</button>
+        <button class="btn btn-outline btn-sm" style="flex:1;" onclick="openChat(${req.id})">💬 Chat mit ${displayName(req.requester)}</button>
       </div>
       ${req.status === "offen" ? `
         <div class="btn-row">
@@ -2016,23 +2252,21 @@ function updateRequestStatus(id, status){
    ======================================================================= */
 function renderSelfProfile(){
   const dj = getDj(state.loggedInDjId);
-  document.getElementById("dj-self-avatar").style.background = dj.color;
-  document.getElementById("dj-self-avatar").textContent = dj.name.split(" ").map(w=>w[0]).join("").slice(0,2);
+  document.getElementById("dj-self-avatar").style.background = avatarBg(dj);
+  document.getElementById("dj-self-avatar").textContent = avatarContent(dj);
   document.getElementById("dj-self-name").innerHTML = dj.name + (dj.isPro ? ' <span class="badge-pro">PRO</span>' : '');
   document.getElementById("dj-self-genre").textContent = dj.genres.join(" · ") + " · " + dj.city;
   document.getElementById("dj-self-followers").textContent = formatFollowers(dj.followers);
   document.getElementById("dj-self-rating").textContent = dj.rating + " ★";
   document.getElementById("dj-self-price").textContent = dj.price;
-  document.getElementById("edit-bio").value = dj.bio;
   document.getElementById("edit-price").value = dj.price;
   renderSelfGigs();
   document.getElementById("dj-self-reviews").innerHTML = buildReviewsSectionHTML(dj, true);
 }
 
-// Live-Übernahme von Bio & Preis aus dem Bearbeiten-Formular in die Mock-Daten
+// Live-Übernahme des Preises aus dem DJ-Tab in die Mock-Daten (Bio/Name/Avatar: siehe Profileinstellungen)
 function updateSelfProfile(){
   const dj = getDj(state.loggedInDjId);
-  dj.bio = document.getElementById("edit-bio").value;
   dj.price = Number(document.getElementById("edit-price").value) || dj.price;
   document.getElementById("dj-self-price").textContent = dj.price;
 }
@@ -2184,7 +2418,7 @@ function openChat(requestId){
   state.activeChatRequestId = requestId;
   const req = bookingRequests.find(r => r.id === requestId);
   const dj = getDj(req.djId);
-  const partnerName = state.role === "dj" ? req.requester : dj.name;
+  const partnerName = state.role === "dj" ? displayName(req.requester) : dj.name;
   document.getElementById("chat-title").textContent = "Chat mit " + partnerName;
 
   // Bei ausgewählter privater Location einen kurzen Hinweis über dem Chatverlauf anzeigen
@@ -2212,11 +2446,17 @@ function renderChatMessages(){
   if(msgs.length === 0){
     container.innerHTML = `<div class="empty-state" style="padding-top:60px;"><p>Noch keine Nachrichten. Schreib die erste!</p></div>`;
   } else {
+    const req = bookingRequests.find(r => r.id === id);
+    const dj = getDj(req.djId);
     msgs.forEach(m => {
-      const bubble = document.createElement("div");
-      bubble.className = "chat-bubble " + (m.sender === state.role ? "mine" : "theirs");
-      bubble.innerHTML = `${m.text}<span class="time">${m.time}</span>`;
-      container.appendChild(bubble);
+      const row = document.createElement("div");
+      row.className = "chat-row " + (m.sender === state.role ? "mine" : "theirs");
+      // Avatar je nach Absender: DJ-Profilbild oder das Profilbild der Partygänger-Demo-Persona
+      const avatarHTML = m.sender === "dj"
+        ? `<div class="avatar round" style="background:${avatarBg(dj)};">${avatarContent(dj)}</div>`
+        : `<div class="avatar round" style="background:${state.userAvatar.color};">${state.userAvatar.emoji || initialsFromName(state.userDisplayName)}</div>`;
+      row.innerHTML = `${avatarHTML}<div class="chat-bubble">${m.text}<span class="time">${m.time}</span></div>`;
+      container.appendChild(row);
     });
   }
   container.scrollTop = container.scrollHeight;
@@ -2352,7 +2592,10 @@ function buildReviewsSectionHTML(dj, readonly){
       ${reviews.map(r => `
         <div class="review-item">
           <div class="review-head">
-            <span class="review-name">${r.name}</span>
+            <div style="display:flex; align-items:center; gap:8px;">
+              ${reviewerAvatarHTML(r)}
+              <span class="review-name">${displayName(r.name)}</span>
+            </div>
             <span class="review-date">${new Date(r.date).toLocaleDateString("de-DE", {day:"2-digit", month:"2-digit", year:"numeric"})}</span>
           </div>
           <div class="review-stars">${"★".repeat(r.stars)}${"☆".repeat(5 - r.stars)}</div>
@@ -2468,7 +2711,7 @@ function renderLocationList(){
       <div class="event-info">
         <div class="n">${loc.name} ${loc.isMine ? '<span class="badge-mine">Deine Location</span>' : ''}</div>
         <div class="loc"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ICONS.location}</svg>${loc.address}</div>
-        <div class="lineup">von ${loc.owner} · bis zu ${loc.capacity} Personen</div>
+        <div class="lineup">von ${displayName(loc.owner)} · bis zu ${loc.capacity} Personen</div>
       </div>`;
     container.appendChild(el);
   });
@@ -2483,7 +2726,7 @@ function openLocationDetail(id){
         <div><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ICONS.location}</svg> ${loc.address}</div>
         <div><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ICONS.users}</svg> Bis zu ${loc.capacity} Personen</div>
       </div>
-      <p class="subtle-text" style="margin:10px 0 0;">Angeboten von ${loc.owner}</p>
+      <p class="subtle-text" style="margin:10px 0 0;">Angeboten von ${displayName(loc.owner)}</p>
     </div>
     <div class="info-block">
       <h4>Beschreibung</h4>
@@ -2496,6 +2739,265 @@ function openLocationDetail(id){
     </div>` : ""}
   `;
   openOverlay("overlay-location-detail");
+}
+
+/* =======================================================================
+   PROFILEINSTELLUNGEN (Avatar, Name, Bio, Benachrichtigungen, Theme)
+   ======================================================================= */
+function openSettingsOverlay(){
+  renderSettingsOverlay();
+  openOverlay("overlay-settings");
+}
+
+// Liefert Avatar-Farbe/Emoji der aktuell in den Einstellungen bearbeiteten Persona (Nutzer oder eingeloggter DJ)
+function getCurrentAvatarEntity(){
+  if(state.role === "user") return state.userAvatar;
+  const dj = getDj(state.loggedInDjId);
+  return { color: dj.color, emoji: dj.avatarEmoji };
+}
+
+function renderSettingsOverlay(){
+  const isUser = state.role === "user";
+  const dj = getDj(state.loggedInDjId);
+  const targetName = isUser ? state.userDisplayName : dj.name;
+  const targetBio = isUser ? state.userBio : dj.bio;
+  const avatar = getCurrentAvatarEntity();
+
+  document.getElementById("settings-body").innerHTML = `
+    <div class="profile-hero" style="margin-bottom:6px;">
+      <div class="avatar round" id="settings-avatar-preview" style="width:76px;height:76px;font-size:28px;background:${avatar.color};">${avatar.emoji || initialsFromName(targetName)}</div>
+    </div>
+    <div class="section-title" style="margin-top:0; text-align:center;">Profilbild wählen</div>
+    <div class="avatar-gallery" id="avatar-gallery"></div>
+
+    <div class="form-group">
+      <label>Anzeigename</label>
+      <input type="text" id="settings-name" value="${targetName}" oninput="updateSettingsName()">
+    </div>
+    <div class="form-group">
+      <label>Bio</label>
+      <textarea id="settings-bio" placeholder="${isUser ? 'Erzähl kurz etwas über dich…' : ''}" oninput="updateSettingsBio()">${targetBio}</textarea>
+    </div>
+
+    <div class="info-block">
+      <h4>Benachrichtigungen</h4>
+      <div class="subtab-switch">
+        <button class="${state.notificationsEnabled ? 'active' : ''}" onclick="setNotifications(true)">🔔 An</button>
+        <button class="${state.notificationsEnabled ? '' : 'active'}" onclick="setNotifications(false)">🔕 Aus</button>
+      </div>
+    </div>
+
+    <div class="info-block" style="margin-bottom:0;">
+      <h4>Darstellung</h4>
+      <div class="subtab-switch">
+        <button class="${state.theme === 'dark' ? 'active' : ''}" onclick="setTheme('dark')">🌙 Dark</button>
+        <button class="${state.theme === 'light' ? 'active' : ''}" onclick="setTheme('light')">☀️ Light</button>
+      </div>
+    </div>
+  `;
+  buildAvatarGallery();
+}
+
+function buildAvatarGallery(){
+  const row = document.getElementById("avatar-gallery");
+  row.innerHTML = "";
+  const current = getCurrentAvatarEntity();
+  AVATAR_PRESETS.forEach(preset => {
+    const opt = document.createElement("button");
+    opt.className = "avatar-option" + (current.color === preset.color && current.emoji === preset.emoji ? " selected" : "");
+    opt.style.background = preset.color;
+    opt.textContent = preset.emoji;
+    opt.onclick = () => selectAvatar(preset);
+    row.appendChild(opt);
+  });
+}
+
+function selectAvatar(preset){
+  if(state.role === "user"){
+    state.userAvatar = { color: preset.color, emoji: preset.emoji };
+  } else {
+    const dj = getDj(state.loggedInDjId);
+    dj.color = preset.color;
+    dj.avatarEmoji = preset.emoji;
+  }
+  renderSettingsOverlay();
+  refreshAllAvatarDependentViews();
+  showToast("Profilbild aktualisiert ✓");
+}
+
+function updateSettingsName(){
+  const val = document.getElementById("settings-name").value;
+  if(state.role === "user"){
+    state.userDisplayName = val || "Du";
+  } else {
+    const dj = getDj(state.loggedInDjId);
+    const oldName = dj.name;
+    dj.name = val || oldName;
+    // Namensänderung in bestehenden Event-Lineups nachziehen, sonst brechen "Kommende Gigs" & Party-Karte
+    events.forEach(e => { e.lineup = e.lineup.map(n => n === oldName ? dj.name : n); });
+  }
+  refreshAllAvatarDependentViews();
+}
+
+function updateSettingsBio(){
+  const val = document.getElementById("settings-bio").value;
+  if(state.role === "user"){ state.userBio = val; }
+  else { getDj(state.loggedInDjId).bio = val; }
+}
+
+function setNotifications(enabled){
+  state.notificationsEnabled = enabled;
+  renderSettingsOverlay();
+  showToast(enabled ? "Benachrichtigungen aktiviert 🔔" : "Benachrichtigungen deaktiviert 🔕");
+}
+
+function setTheme(theme){
+  state.theme = theme;
+  document.getElementById("app-phone").setAttribute("data-theme", theme);
+  renderSettingsOverlay();
+}
+
+// Aktualisiert alle Ansichten, in denen Avatare/Namen sichtbar sein könnten
+function refreshAllAvatarDependentViews(){
+  renderDjList();
+  renderFollowScroll();
+  renderFeed();
+  renderMyRequests();
+  renderDjRequests();
+  renderSelfProfile();
+}
+
+/* =======================================================================
+   STORIES (wie Instagram, 24 Std. simuliert aktiv)
+   ======================================================================= */
+function getActiveStories(djId){
+  return (storiesByDj[djId] || []).filter(s => s.hoursAgo < 24).sort((a, b) => b.hoursAgo - a.hoursAgo);
+}
+
+function openAddStoryForm(){
+  document.getElementById("story-form-text").value = "";
+  state.newStoryBackground = STORY_BACKGROUNDS[0];
+  state.newStoryEmoji = STORY_EMOJIS[0];
+  buildStoryBgRow();
+  buildStoryEmojiRow();
+  openOverlay("overlay-add-story");
+}
+
+function buildStoryBgRow(){
+  const row = document.getElementById("story-bg-row");
+  row.innerHTML = "";
+  STORY_BACKGROUNDS.forEach((bg, i) => {
+    const sw = document.createElement("button");
+    sw.className = "color-swatch" + (i === 0 ? " selected" : "");
+    sw.style.background = bg;
+    sw.onclick = () => {
+      state.newStoryBackground = bg;
+      [...row.children].forEach(c => c.classList.remove("selected"));
+      sw.classList.add("selected");
+    };
+    row.appendChild(sw);
+  });
+}
+
+function buildStoryEmojiRow(){
+  const row = document.getElementById("story-emoji-row");
+  row.innerHTML = "";
+  STORY_EMOJIS.forEach((emoji, i) => {
+    const chip = document.createElement("button");
+    chip.className = "chip" + (i === 0 ? " selected" : "");
+    chip.textContent = emoji;
+    chip.onclick = () => {
+      state.newStoryEmoji = emoji;
+      [...row.children].forEach(c => c.classList.remove("selected"));
+      chip.classList.add("selected");
+    };
+    row.appendChild(chip);
+  });
+}
+
+function submitStory(){
+  const text = document.getElementById("story-form-text").value.trim();
+  if(!text){
+    showToast("Bitte gib einen Text ein.");
+    return;
+  }
+  const djId = state.loggedInDjId;
+  if(!storiesByDj[djId]) storiesByDj[djId] = [];
+  storiesByDj[djId].unshift({
+    id: nextStoryId++,
+    text,
+    background: state.newStoryBackground,
+    emoji: state.newStoryEmoji,
+    hoursAgo: 0,
+    seen: false,
+  });
+  closeOverlay("overlay-add-story");
+  renderFollowScroll();
+  showToast("Story gepostet! 📸");
+}
+
+function openStoryViewer(djId){
+  const stories = getActiveStories(djId);
+  if(stories.length === 0) return;
+  state.storyViewer = { djId, stories, index: 0 };
+  openOverlay("overlay-story-viewer");
+  renderStorySlide();
+}
+
+function renderStorySlide(){
+  const { djId, stories, index } = state.storyViewer;
+  const dj = getDj(djId);
+  const story = stories[index];
+  story.seen = true; // als gesehen markieren, sobald sie angezeigt wird
+
+  document.getElementById("story-avatar").style.background = avatarBg(dj);
+  document.getElementById("story-avatar").textContent = avatarContent(dj);
+  document.getElementById("story-dj-name").textContent = dj.name;
+  document.getElementById("story-time").textContent = "vor " + story.hoursAgo + " Std.";
+  document.getElementById("story-content").style.background = story.background;
+  document.getElementById("story-slide-body").innerHTML = `<div class="story-emoji">${story.emoji || ""}</div><div class="story-text">${story.text}</div>`;
+
+  // Fortschrittsbalken passend zur Anzahl der Stories dieses DJs neu aufbauen
+  const row = document.getElementById("story-progress-row");
+  row.innerHTML = "";
+  stories.forEach((s, i) => {
+    const seg = document.createElement("div");
+    seg.className = "story-progress-seg";
+    const fill = document.createElement("div");
+    fill.className = "fill" + (i < index ? " done" : "");
+    if(i === index){ fill.style.animation = "storyFill 4s linear forwards"; }
+    seg.appendChild(fill);
+    row.appendChild(seg);
+  });
+
+  renderFollowScroll(); // Ring-Status (gesehen/ungesehen) aktualisieren
+
+  clearTimeout(state.storyTimer);
+  state.storyTimer = setTimeout(storyNext, 4000);
+}
+
+function storyNext(){
+  const sv = state.storyViewer;
+  if(sv.index < sv.stories.length - 1){
+    sv.index++;
+    renderStorySlide();
+  } else {
+    closeStoryViewer();
+  }
+}
+
+function storyPrev(){
+  const sv = state.storyViewer;
+  if(sv.index > 0){
+    sv.index--;
+    renderStorySlide();
+  }
+}
+
+function closeStoryViewer(){
+  clearTimeout(state.storyTimer);
+  closeOverlay("overlay-story-viewer");
+  renderFollowScroll();
 }
 
 /* =======================================================================
