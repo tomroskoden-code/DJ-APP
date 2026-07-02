@@ -469,6 +469,107 @@
     opacity:0; pointer-events:none; transition: all .3s ease; z-index:200; white-space:nowrap;
   }
   .toast.show{ opacity:1; transform: translateX(-50%) translateY(0); }
+
+  /* ===================== Werbeelemente (Monetarisierung) ===================== */
+  .badge-sponsored{
+    font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px;
+    background: rgba(255,176,32,0.18); color: var(--warning); border:1px solid rgba(255,176,32,0.45);
+  }
+  .dj-card.sponsored{
+    border-color: rgba(255,176,32,0.45);
+    background: linear-gradient(135deg, rgba(255,176,32,0.09), var(--bg-card));
+  }
+  .badge-pro{
+    font-size:10px; font-weight:800; letter-spacing:0.4px; padding:2px 8px; border-radius:999px;
+    background: linear-gradient(90deg, var(--neon-magenta), var(--neon-violet)); color:#fff;
+  }
+  .post-card.ad{ border-color: rgba(255,176,32,0.4); background: linear-gradient(135deg, rgba(255,176,32,0.07), var(--bg-card)); }
+  .ad-avatar{ font-size:18px; background: var(--bg-elevated); border:1px solid rgba(255,176,32,0.4); }
+
+  /* ===================== BeatSpot Pro ===================== */
+  .btn-pro{
+    background: linear-gradient(90deg, var(--warning), var(--neon-magenta));
+    color:#0b0710;
+    box-shadow: 0 4px 18px rgba(255,176,32,0.3);
+    margin-bottom:16px;
+  }
+  .pro-compare-row{
+    display:grid; grid-template-columns:1.5fr 0.7fr 0.7fr; align-items:center;
+    padding:9px 0; border-bottom:1px solid var(--border-subtle); font-size:12.5px;
+  }
+  .pro-compare-row:last-child{ border-bottom:none; }
+  .pro-compare-row span:nth-child(2), .pro-compare-row span:nth-child(3){ text-align:center; font-weight:700; }
+  .pro-compare-row.head{ color: var(--text-secondary); font-weight:700; text-transform:uppercase; font-size:10.5px; letter-spacing:0.4px; }
+
+  /* ===================== Kalender (DJ-Verfügbarkeit) ===================== */
+  .calendar-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+  .calendar-nav-btn{
+    background: var(--bg-elevated); border:1px solid var(--border-subtle); color: var(--text-primary);
+    width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+  }
+  .calendar-nav-btn:active{ transform: scale(0.9); }
+  .calendar-month-label{ font-weight:700; font-size:13.5px; }
+  .calendar-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:12px; }
+  .calendar-weekday{ text-align:center; font-size:10px; color: var(--text-muted); font-weight:700; text-transform:uppercase; }
+  .calendar-day{
+    aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+    border-radius:8px; background: var(--bg-elevated); font-size:12px; font-weight:600;
+    border:1px solid transparent; color: var(--text-secondary);
+  }
+  .calendar-day.empty{ background:transparent; }
+  .calendar-day.past{ opacity:0.25; }
+  .calendar-day.blocked{ background: rgba(255,77,109,0.18); border-color: rgba(255,77,109,0.5); color: var(--danger); }
+  .calendar-day.booked{ background: rgba(46,242,255,0.18); border-color: rgba(46,242,255,0.5); color: var(--neon-cyan); }
+
+  /* ===================== Buchungsflow: Verfügbarkeits-Hinweis ===================== */
+  .date-warning{
+    display:flex; align-items:center; gap:8px;
+    background: rgba(255,77,109,0.12); border:1px solid rgba(255,77,109,0.4); color: var(--danger);
+    font-size:12.5px; padding:10px 12px; border-radius: var(--radius-sm); margin:-8px 0 16px;
+  }
+  .btn:disabled{ opacity:0.45; filter:grayscale(0.3); pointer-events:none; }
+
+  /* ===================== Sub-Tab-Umschalter (Feed / Meine Anfragen) ===================== */
+  .subtab-switch{
+    display:flex; background: var(--bg-elevated); border:1px solid var(--border-subtle);
+    border-radius:999px; padding:3px; gap:2px; margin-bottom:16px;
+  }
+  .subtab-switch button{
+    flex:1; border:none; background:transparent; color: var(--text-secondary);
+    font-size:12.5px; font-weight:700; padding:9px 10px; border-radius:999px; transition: all .2s ease;
+  }
+  .subtab-switch button.active{
+    color:#0b0710; background: linear-gradient(90deg, var(--neon-cyan), var(--neon-violet));
+  }
+  .subtab-switch button:active{ transform: scale(0.95); }
+
+  /* ===================== Chat ===================== */
+  .chat-messages{ flex:1 1 auto; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:10px; }
+  .chat-bubble{ max-width:75%; padding:10px 13px; border-radius:16px; font-size:13.5px; line-height:1.4; }
+  .chat-bubble.theirs{
+    align-self:flex-start; background: var(--bg-card); border:1px solid var(--border-subtle);
+    border-bottom-left-radius:4px;
+  }
+  .chat-bubble.mine{
+    align-self:flex-end; color:#fff; border-bottom-right-radius:4px;
+    background: linear-gradient(135deg, var(--neon-magenta), var(--neon-violet));
+  }
+  .chat-bubble .time{ display:block; font-size:10px; opacity:0.65; margin-top:5px; }
+  .chat-input-row{
+    flex:0 0 auto; display:flex; gap:8px; align-items:center;
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+    border-top:1px solid var(--border-subtle);
+  }
+  .chat-input-row input{
+    flex:1; background: var(--bg-card); border:1px solid var(--border-subtle); color: var(--text-primary);
+    padding:11px 14px; border-radius:999px; font-size:13.5px; outline:none;
+  }
+  .chat-send-btn{
+    width:42px; height:42px; border-radius:50%; flex:0 0 auto; border:none;
+    background: linear-gradient(90deg, var(--neon-magenta), var(--neon-violet)); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .chat-send-btn:active{ transform: scale(0.9); }
 </style>
 </head>
 <body>
@@ -539,11 +640,25 @@
 
     <!-- TAB 2a: Nutzer – Feed & Folgen -->
     <section class="tab-content" id="tab-2-user">
-      <div class="section-title">DJs zum Folgen</div>
-      <div class="follow-scroll" id="follow-scroll"></div>
+      <div class="subtab-switch">
+        <button id="subtab-feed-btn" class="active" onclick="switchUserFeedSubtab('feed')">Feed</button>
+        <button id="subtab-requests-btn" onclick="switchUserFeedSubtab('requests')">Meine Anfragen</button>
+      </div>
 
-      <div class="section-title">Dein Feed</div>
-      <div id="feed-list"></div>
+      <!-- Unter-Ansicht: Feed & Folgen -->
+      <div id="user-feed-panel">
+        <div class="section-title" style="margin-top:2px;">DJs zum Folgen</div>
+        <div class="follow-scroll" id="follow-scroll"></div>
+
+        <div class="section-title">Dein Feed</div>
+        <div id="feed-list"></div>
+      </div>
+
+      <!-- Unter-Ansicht: eigene gesendete Buchungsanfragen -->
+      <div id="user-requests-panel" style="display:none;">
+        <div class="section-title" style="margin-top:2px;">Deine gesendeten Anfragen</div>
+        <div id="my-requests-list"></div>
+      </div>
     </section>
 
     <!-- TAB 2b: DJ – Mein Profil -->
@@ -557,6 +672,24 @@
           <div class="stat"><div class="num" id="dj-self-rating"></div><div class="lbl">Bewertung</div></div>
           <div class="stat"><div class="num" id="dj-self-price"></div><div class="lbl">€ / Std.</div></div>
         </div>
+      </div>
+
+      <button class="btn btn-pro" onclick="openProOverlay()">🚀 BeatSpot Pro entdecken</button>
+
+      <div class="info-block">
+        <h4>Verfügbarkeit / Kalender</h4>
+        <div class="calendar-header">
+          <button class="calendar-nav-btn" onclick="changeCalendarMonth(-1)">‹</button>
+          <span class="calendar-month-label" id="calendar-month-label"></span>
+          <button class="calendar-nav-btn" onclick="changeCalendarMonth(1)">›</button>
+        </div>
+        <div class="calendar-grid" id="calendar-grid"></div>
+        <div class="map-legend" style="margin-top:12px;">
+          <span><span class="dotlegend" style="background:var(--bg-elevated); border:1px solid var(--border-subtle);"></span>Frei</span>
+          <span><span class="dotlegend" style="background:var(--danger);"></span>Blockiert</span>
+          <span><span class="dotlegend" style="background:var(--neon-cyan);"></span>Gebucht</span>
+        </div>
+        <p class="subtle-text" style="margin:10px 0 0;">Tippe auf einen Tag, um ihn zu blockieren oder wieder freizugeben.</p>
       </div>
 
       <div class="info-block">
@@ -635,23 +768,43 @@
         <div id="booking-step-1">
           <div class="form-group">
             <label>Datum</label>
-            <input type="date" id="booking-date">
+            <input type="date" id="booking-date" oninput="checkBookingDateAvailability()">
+          </div>
+          <div class="date-warning" id="booking-date-warning" style="display:none;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            DJ ist an diesem Tag nicht verfügbar. Bitte wähle ein anderes Datum.
           </div>
           <div class="form-group">
-            <label>Uhrzeit</label>
+            <label>Uhrzeit (Beginn)</label>
             <input type="time" id="booking-time" value="22:00">
           </div>
-          <button class="btn btn-primary" onclick="goToBookingStep(2)">Weiter</button>
+          <div class="form-group">
+            <label>Dauer</label>
+            <select id="booking-duration">
+              <option value="2">2 Stunden</option>
+              <option value="3">3 Stunden</option>
+              <option value="4" selected>4 Stunden</option>
+              <option value="5">5 Stunden</option>
+              <option value="6">6 Stunden</option>
+              <option value="7">7 Stunden</option>
+              <option value="8">8 Stunden</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="booking-step1-next-btn" onclick="goToBookingStep(2)">Weiter</button>
         </div>
 
-        <!-- Schritt 2: Event-Typ -->
+        <!-- Schritt 2: Event-Typ, Genre & Sonderwünsche -->
         <div id="booking-step-2" style="display:none;">
           <div class="form-group">
             <label>Art des Events</label>
             <div class="type-grid" id="event-type-grid"></div>
           </div>
           <div class="form-group">
-            <label>Nachricht an den DJ (optional)</label>
+            <label>Gewünschtes Genre</label>
+            <div class="chip-row" id="booking-genre-row"></div>
+          </div>
+          <div class="form-group">
+            <label>Sonderwünsche (optional)</label>
             <textarea id="booking-message" placeholder="z.B. Musikwünsche, Ort, weitere Infos…"></textarea>
           </div>
           <button class="btn btn-primary" onclick="goToBookingStep(3)">Weiter zur Übersicht</button>
@@ -698,6 +851,34 @@
       <div class="overlay-body" id="event-detail-body"></div>
     </section>
 
+    <!-- ===================== OVERLAY: BeatSpot Pro ===================== -->
+    <section class="overlay" id="overlay-pro">
+      <div class="overlay-header">
+        <button class="back-btn" onclick="closeOverlay('overlay-pro')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <h2>BeatSpot Pro</h2>
+      </div>
+      <div class="overlay-body" id="pro-body"></div>
+    </section>
+
+    <!-- ===================== OVERLAY: Chat zu einer Buchungsanfrage ===================== -->
+    <section class="overlay" id="overlay-chat">
+      <div class="overlay-header">
+        <button class="back-btn" onclick="closeOverlay('overlay-chat')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <h2 id="chat-title">Chat</h2>
+      </div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-input" placeholder="Nachricht schreiben…" onkeydown="if(event.key==='Enter'){sendChatMessage();}">
+        <button class="chat-send-btn" onclick="sendChatMessage()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </section>
+
   </main>
 
   <!-- ===================== Bottom Tab-Bar ===================== -->
@@ -740,38 +921,55 @@ const ICONS = {
 };
 
 // 6 DJs mit realistischen Beispieldaten
+// isPro: BeatSpot-Pro-Abo aktiv? | sponsored: erscheint als "Gesponsert"-Anzeige in der Suche
+// blockedDates: vom DJ manuell blockierte Tage (ISO-Format), siehe Kalenderfunktion
 const djs = [
   { id: 1, name: "DJ Nova", genre: "Techno", genres: ["Techno", "House"], price: 120, rating: 4.8, city: "Berlin",
-    color: "linear-gradient(135deg,#ff2ee6,#8a3ffc)", available: true,
+    color: "linear-gradient(135deg,#ff2ee6,#8a3ffc)", available: true, isPro: false, sponsored: false,
+    blockedDates: ["2026-07-10", "2026-07-11", "2026-07-25"],
     bio: "DJ Nova bringt seit über 8 Jahren Clubs in Berlin und ganz Europa zum Beben. Bekannt für treibende Techno-Sets mit hypnotischen Synth-Layern.",
     followers: 12400,
     mixes: [{title:"Warehouse Session Vol. 4", duration:"58 Min"}, {title:"Midnight Drive", duration:"42 Min"}] },
   { id: 2, name: "Luna Beats", genre: "House", genres: ["House", "Deep House"], price: 95, rating: 4.6, city: "Hamburg",
-    color: "linear-gradient(135deg,#2ef2ff,#8a3ffc)", available: true,
+    color: "linear-gradient(135deg,#2ef2ff,#8a3ffc)", available: true, isPro: false, sponsored: false,
+    blockedDates: ["2026-07-15"],
     bio: "Luna Beats steht für warme House-Grooves und sonnige Rooftop-Vibes. Ihre Sets sind der perfekte Soundtrack für laue Sommernächte.",
     followers: 8700,
     mixes: [{title:"Rooftop Sunset Mix", duration:"63 Min"}] },
   { id: 3, name: "MC Solstice", genre: "Hip-Hop", genres: ["Hip-Hop", "Rap"], price: 110, rating: 4.9, city: "München",
-    color: "linear-gradient(135deg,#ffb020,#ff2ee6)", available: false,
+    color: "linear-gradient(135deg,#ffb020,#ff2ee6)", available: false, isPro: false, sponsored: false,
+    blockedDates: [],
     bio: "MC Solstice verbindet Old-School-Hip-Hop mit aktuellen Rap-Hits und bringt garantiert jede Crowd zum Mitsingen.",
     followers: 15600,
     mixes: [{title:"Backstage Anthems", duration:"50 Min"}, {title:"Old School Classics", duration:"71 Min"}] },
   { id: 4, name: "Electra Vibe", genre: "EDM", genres: ["EDM", "Electro"], price: 140, rating: 4.7, city: "Köln",
-    color: "linear-gradient(135deg,#8a3ffc,#2ef2ff)", available: true,
+    color: "linear-gradient(135deg,#8a3ffc,#2ef2ff)", available: true, isPro: false, sponsored: true,
+    blockedDates: [],
     bio: "Electra Vibe liefert bombastische EDM-Drops und energiegeladene Bühnenshows für Festivals und große Clubnächte.",
     followers: 21300,
     mixes: [{title:"Festival Anthem Set", duration:"55 Min"}] },
   { id: 5, name: "DJ Kalypso", genre: "Latin", genres: ["Latin", "Reggaeton"], price: 90, rating: 4.5, city: "Frankfurt",
-    color: "linear-gradient(135deg,#33e6a0,#2ef2ff)", available: true,
+    color: "linear-gradient(135deg,#33e6a0,#2ef2ff)", available: true, isPro: false, sponsored: true,
+    blockedDates: [],
     bio: "DJ Kalypso bringt karibisches Flair nach Deutschland – Reggaeton, Latin-Pop und Salsa für die perfekte Tanzfläche.",
     followers: 6300,
     mixes: [{title:"Fiesta Latina Mix", duration:"47 Min"}] },
   { id: 6, name: "Nightshade", genre: "Dark Techno", genres: ["Techno", "Industrial"], price: 130, rating: 4.9, city: "Berlin",
-    color: "linear-gradient(135deg,#6f6484,#ff2ee6)", available: false,
+    color: "linear-gradient(135deg,#6f6484,#ff2ee6)", available: false, isPro: false, sponsored: false,
+    blockedDates: [],
     bio: "Nightshade steht für rohe, düstere Techno-Sounds und intensive Warehouse-Atmosphäre. Nichts für schwache Nerven.",
     followers: 18900,
     mixes: [{title:"Industrial Nights", duration:"66 Min"}, {title:"Bunker Tapes", duration:"39 Min"}] },
 ];
+
+// IDs der DJs, die als "Gesponsert" in der Suchliste beworben werden
+const SPONSORED_DJ_IDS = djs.filter(d => d.sponsored).map(d => d.id);
+
+// Werbe-Post im Feed (Anzeige, unabhängig von gefolgten DJs)
+const feedAd = {
+  sponsor: "PulseMix Audio",
+  text: "🎧 Neue DJ-Controller-Serie von PulseMix – jetzt 15% Rabatt für BeatSpot-Nutzer sichern!",
+};
 
 // 5 Events für die Party-Karte
 const events = [
@@ -793,12 +991,29 @@ let feedPosts = [
 
 // Eingehende Buchungsanfragen für die DJ-Rolle (Demo-DJ = djs[0], "DJ Nova")
 let bookingRequests = [
-  { id: 1, djId: 1, requester: "Sarah M.", eventType: "Geburtstag", date: "2026-07-12", time: "20:00", location: "Privatwohnung, Berlin", message: "Wir feiern meinen 30. – bitte viel House & Charts!", status: "offen" },
-  { id: 2, djId: 1, requester: "Firma Blitz GmbH", eventType: "Firmenfeier", date: "2026-07-20", time: "18:00", location: "Eventhalle Mitte, Berlin", message: "Sommerfest für ca. 150 Mitarbeitende.", status: "bestaetigt" },
-  { id: 3, djId: 1, requester: "Jonas & Lea", eventType: "Hochzeit", date: "2026-08-02", time: "16:00", location: "Schloss Charlottenhof, Potsdam", message: "Standesamtliche Trauung mit anschließender Feier.", status: "abgelehnt" },
+  { id: 1, djId: 1, requester: "Sarah M.", eventType: "Geburtstag", date: "2026-07-12", time: "20:00", duration: 4, genre: "House", location: "Privatwohnung, Berlin", message: "Wir feiern meinen 30. – bitte viel House & Charts!", status: "offen" },
+  { id: 2, djId: 1, requester: "Firma Blitz GmbH", eventType: "Firmenfeier", date: "2026-07-20", time: "18:00", duration: 6, genre: "Techno", location: "Eventhalle Mitte, Berlin", message: "Sommerfest für ca. 150 Mitarbeitende.", status: "bestaetigt" },
+  { id: 3, djId: 1, requester: "Jonas & Lea", eventType: "Hochzeit", date: "2026-08-02", time: "16:00", duration: 5, genre: "House", location: "Schloss Charlottenhof, Potsdam", message: "Standesamtliche Trauung mit anschließender Feier.", status: "abgelehnt" },
 ];
 
 const EVENT_TYPES = ["Hochzeit", "Geburtstag", "Firmenfeier", "Club Night", "Private Party", "Festival"];
+
+// Chat-Nachrichten je Buchungsanfrage-ID (sender: "user" oder "dj")
+let chatMessages = {
+  2: [
+    { sender: "user", text: "Hallo, könnt ihr auch eine Nebelmaschine mitbringen?", time: "Gestern, 14:02" },
+    { sender: "dj", text: "Klar, kein Problem! Ich bringe Nebel- und Lichteffekte mit.", time: "Gestern, 14:20" },
+  ],
+};
+
+// Automatische Antworten der Gegenseite, damit der Chat im Prototyp lebendig wirkt
+const AUTO_REPLIES = [
+  "Klingt gut, das kriegen wir hin! 👍",
+  "Danke für die Info, ich melde mich zeitnah mit Details.",
+  "Alles klar, notiert!",
+  "Super, ich freu mich schon drauf! 🎧",
+  "Kein Problem, das lässt sich einrichten.",
+];
 
 /* =======================================================================
    APPLIKATIONS-STATUS
@@ -809,13 +1024,18 @@ const state = {
   followed: new Set([1, 2]), // Nutzer folgt anfangs DJ Nova & Luna Beats
   selectedGenres: new Set(),
   loggedInDjId: 1,           // Demo: eingeloggter DJ ist "DJ Nova"
-  booking: { djId: null, date: "", time: "", type: "", message: "" },
+  booking: { djId: null, date: "", time: "", duration: 4, type: "", genre: "", message: "" },
   nextRequestId: 4,
   nextPostId: 6,
+  calendarMonth: { year: 2026, month: 6 }, // 0-indexiert: Juli = 6, Startmonat lt. aktuellem Datum
+  activeChatRequestId: null,
 };
 
 function getDj(id){ return djs.find(d => d.id === id); }
 function formatFollowers(n){ return n >= 1000 ? (n/1000).toFixed(1).replace(".0","") + "k" : n; }
+
+// Ist der eingeloggte Demo-DJ Pro-Mitglied? Dann ist die App für ihn werbefrei.
+function isAdFreeActive(){ return getDj(state.loggedInDjId).isPro === true; }
 
 /* =======================================================================
    INITIALISIERUNG
@@ -866,7 +1086,9 @@ function init(){
   renderMap();
   renderTonightList();
   renderDjRequests();
+  renderMyRequests();
   renderSelfProfile();
+  renderCalendar();
   applyRoleToNav();
   switchTab(1); // Start-Ansicht: Tab 1 aktiv setzen
 }
@@ -956,6 +1178,9 @@ function renderDjList(){
     return matchesQuery && matchesGenre && matchesCity && matchesAvailability && matchesPrice;
   });
 
+  // Pro-DJs werden in der Suchliste nach oben priorisiert (echter Vorteil des Pro-Abos)
+  list = [...list].sort((a, b) => (b.isPro ? 1 : 0) - (a.isPro ? 1 : 0));
+
   const container = document.getElementById("dj-list");
   container.innerHTML = "";
 
@@ -967,22 +1192,36 @@ function renderDjList(){
     return;
   }
 
-  list.forEach(dj => {
-    const card = document.createElement("div");
-    card.className = "dj-card";
-    card.onclick = () => openDjDetail(dj.id);
-    card.innerHTML = `
-      <div class="avatar" style="background:${dj.color};">${dj.name.split(" ").map(w=>w[0]).join("").slice(0,2)}</div>
-      <div class="dj-card-info">
-        <div class="name">${dj.name} ${dj.available ? '<span class="badge-available">Verfügbar</span>' : ''}</div>
-        <div class="genre">${dj.genres.join(" · ")} · ${dj.city}</div>
-        <div class="dj-meta">
-          <span class="rating"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">${ICONS.star}</svg> ${dj.rating}</span>
-          <span class="price-tag">${dj.price} €/Std.</span>
-        </div>
-      </div>`;
-    container.appendChild(card);
+  const adsActive = !isAdFreeActive();
+  list.forEach((dj, i) => {
+    container.appendChild(buildDjCard(dj));
+    // Nach jedem 3. Eintrag eine "Gesponsert"-Karte einstreuen (entfällt bei aktivem Pro-Abo)
+    if(adsActive && (i + 1) % 3 === 0 && SPONSORED_DJ_IDS.length > 0){
+      const sponsoredDj = getDj(SPONSORED_DJ_IDS[Math.floor(i / 3) % SPONSORED_DJ_IDS.length]);
+      container.appendChild(buildDjCard(sponsoredDj, true));
+    }
   });
+}
+
+// Erzeugt eine DJ-Karte; isAd=true kennzeichnet sie zusätzlich als "Gesponsert"
+function buildDjCard(dj, isAd){
+  const card = document.createElement("div");
+  card.className = "dj-card" + (isAd ? " sponsored" : "");
+  card.onclick = () => openDjDetail(dj.id);
+  card.innerHTML = `
+    <div class="avatar" style="background:${dj.color};">${dj.name.split(" ").map(w=>w[0]).join("").slice(0,2)}</div>
+    <div class="dj-card-info">
+      <div class="name">${dj.name}
+        ${dj.isPro ? '<span class="badge-pro">PRO</span>' : ''}
+        ${isAd ? '<span class="badge-sponsored">Gesponsert</span>' : (dj.available ? '<span class="badge-available">Verfügbar</span>' : '')}
+      </div>
+      <div class="genre">${dj.genres.join(" · ")} · ${dj.city}</div>
+      <div class="dj-meta">
+        <span class="rating"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">${ICONS.star}</svg> ${dj.rating}</span>
+        <span class="price-tag">${dj.price} €/Std.</span>
+      </div>
+    </div>`;
+  return card;
 }
 
 function openDjDetail(id){
@@ -1021,14 +1260,52 @@ function openDjDetail(id){
    BUCHUNGSFLOW
    ======================================================================= */
 function startBooking(djId){
-  state.booking = { djId, date: "", time: "22:00", type: "", message: "" };
+  const dj = getDj(djId);
+  state.booking = { djId, date: "", time: "22:00", duration: 4, type: "", genre: dj.genres[0], message: "" };
   document.getElementById("booking-date").value = "";
   document.getElementById("booking-time").value = "22:00";
+  document.getElementById("booking-duration").value = "4";
   document.getElementById("booking-message").value = "";
   document.querySelectorAll("#event-type-grid .type-option").forEach(o => o.classList.remove("selected"));
+  document.getElementById("booking-date-warning").style.display = "none";
+  document.getElementById("booking-step1-next-btn").disabled = false;
+  buildBookingGenreChips(dj);
   goToBookingStep(1);
   closeOverlay("overlay-dj-detail");
   openOverlay("overlay-booking");
+}
+
+// Baut die Genre-Auswahl-Chips passend zu den Genres des gewählten DJs auf
+function buildBookingGenreChips(dj){
+  const row = document.getElementById("booking-genre-row");
+  row.innerHTML = "";
+  dj.genres.forEach((g, idx) => {
+    const chip = document.createElement("button");
+    chip.className = "chip" + (idx === 0 ? " selected" : "");
+    chip.textContent = g;
+    chip.onclick = () => {
+      state.booking.genre = g;
+      [...row.children].forEach(c => c.classList.remove("selected"));
+      chip.classList.add("selected");
+    };
+    row.appendChild(chip);
+  });
+}
+
+// Prüft, ob der gewählte Tag für den DJ blockiert oder bereits verbucht ist
+function isDateBookedForDj(djId, dateStr){
+  return bookingRequests.some(r => r.djId === djId && r.date === dateStr && r.status === "bestaetigt");
+}
+function isDateBlockedForDj(djId, dateStr){
+  return getDj(djId).blockedDates.includes(dateStr) || isDateBookedForDj(djId, dateStr);
+}
+
+// Zeigt bei nicht verfügbarem Datum einen Hinweis an und sperrt den "Weiter"-Button
+function checkBookingDateAvailability(){
+  const dateVal = document.getElementById("booking-date").value;
+  const blocked = !!dateVal && isDateBlockedForDj(state.booking.djId, dateVal);
+  document.getElementById("booking-date-warning").style.display = blocked ? "flex" : "none";
+  document.getElementById("booking-step1-next-btn").disabled = blocked;
 }
 
 function goToBookingStep(step){
@@ -1044,6 +1321,7 @@ function goToBookingStep(step){
   if(step === 2){
     state.booking.date = document.getElementById("booking-date").value;
     state.booking.time = document.getElementById("booking-time").value;
+    state.booking.duration = Number(document.getElementById("booking-duration").value);
   }
   if(step === 3){
     state.booking.message = document.getElementById("booking-message").value;
@@ -1062,15 +1340,20 @@ function handleBookingBack(){
 
 function renderBookingSummary(){
   const dj = getDj(state.booking.djId);
-  const dateFormatted = state.booking.date
-    ? new Date(state.booking.date).toLocaleDateString("de-DE", {weekday:"short", day:"2-digit", month:"long"})
+  const b = state.booking;
+  const dateFormatted = b.date
+    ? new Date(b.date).toLocaleDateString("de-DE", {weekday:"short", day:"2-digit", month:"long"})
     : "–";
+  const estimatedPrice = b.duration * dj.price;
   document.getElementById("booking-summary").innerHTML = `
     <div class="booking-summary-row"><span class="lbl">DJ</span><span>${dj.name}</span></div>
     <div class="booking-summary-row"><span class="lbl">Datum</span><span>${dateFormatted}</span></div>
-    <div class="booking-summary-row"><span class="lbl">Uhrzeit</span><span>${state.booking.time} Uhr</span></div>
-    <div class="booking-summary-row"><span class="lbl">Event-Typ</span><span>${state.booking.type || "–"}</span></div>
-    <div class="booking-summary-row"><span class="lbl">Preis (geschätzt)</span><span class="price-tag">${dj.price} €/Std.</span></div>
+    <div class="booking-summary-row"><span class="lbl">Uhrzeit</span><span>${b.time} Uhr</span></div>
+    <div class="booking-summary-row"><span class="lbl">Dauer</span><span>${b.duration} Std.</span></div>
+    <div class="booking-summary-row"><span class="lbl">Event-Typ</span><span>${b.type || "–"}</span></div>
+    <div class="booking-summary-row"><span class="lbl">Genre</span><span>${b.genre || "–"}</span></div>
+    ${b.message ? `<div class="booking-summary-row"><span class="lbl">Sonderwünsche</span><span style="text-align:right; max-width:60%;">${b.message}</span></div>` : ""}
+    <div class="booking-summary-row"><span class="lbl">Preis (geschätzt)</span><span class="price-tag">${estimatedPrice} € (${b.duration} × ${dj.price} €)</span></div>
   `;
 }
 
@@ -1080,27 +1363,35 @@ function submitBooking(){
 
   // Neue Anfrage im Mock-Datensatz der Buchungsanfragen ablegen,
   // damit sie – falls der gebuchte DJ die Demo-DJ-Rolle ist – dort sichtbar wird
+  const newRequestId = state.nextRequestId++;
   bookingRequests.unshift({
-    id: state.nextRequestId++,
+    id: newRequestId,
     djId: b.djId,
     requester: "Du",
     eventType: b.type || "Sonstiges",
     date: b.date || "2026-07-02",
     time: b.time,
+    duration: b.duration,
+    genre: b.genre,
     location: "wird noch abgestimmt",
     message: b.message,
     status: "offen",
   });
   renderDjRequests();
+  renderMyRequests();
 
   const dateFormatted = b.date
     ? new Date(b.date).toLocaleDateString("de-DE", {weekday:"short", day:"2-digit", month:"long"})
     : "–";
+  const estimatedPrice = b.duration * dj.price;
   document.getElementById("confirmation-summary").innerHTML = `
     <div class="booking-summary-row"><span class="lbl">DJ</span><span>${dj.name}</span></div>
     <div class="booking-summary-row"><span class="lbl">Datum</span><span>${dateFormatted}</span></div>
     <div class="booking-summary-row"><span class="lbl">Uhrzeit</span><span>${b.time} Uhr</span></div>
+    <div class="booking-summary-row"><span class="lbl">Dauer</span><span>${b.duration} Std.</span></div>
     <div class="booking-summary-row"><span class="lbl">Event-Typ</span><span>${b.type || "–"}</span></div>
+    <div class="booking-summary-row"><span class="lbl">Genre</span><span>${b.genre || "–"}</span></div>
+    <div class="booking-summary-row"><span class="lbl">Preis (geschätzt)</span><span class="price-tag">${estimatedPrice} €</span></div>
   `;
   closeOverlay("overlay-booking");
   openOverlay("overlay-confirmation");
@@ -1130,6 +1421,7 @@ function renderFollowScroll(){
 function renderFeed(){
   const container = document.getElementById("feed-list");
   const relevant = feedPosts.filter(p => state.followed.has(p.djId));
+  const adsActive = !isAdFreeActive();
   container.innerHTML = "";
 
   if(relevant.length === 0){
@@ -1137,27 +1429,50 @@ function renderFeed(){
       <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">${ICONS.heart}</svg>
       <p>Folge DJs, um ihre Beiträge hier zu sehen.</p>
     </div>`;
-    return;
   }
 
-  relevant.forEach(post => {
-    const dj = getDj(post.djId);
-    const el = document.createElement("div");
-    el.className = "post-card";
-    el.innerHTML = `
-      <div class="post-head">
-        <div class="avatar round" style="background:${dj.color};">${dj.name.split(" ").map(w=>w[0]).join("").slice(0,2)}</div>
-        <div class="who"><div class="n">${dj.name}</div><div class="t">${post.time}</div></div>
-      </div>
-      <div class="post-text">${post.text}</div>
-      <div class="post-footer">
-        <span class="likebtn ${post.liked ? 'liked' : ''}" onclick="toggleLike(${post.id})">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="${post.liked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">${ICONS.heart}</svg> ${post.likes}
-        </span>
-      </div>`;
-    el.querySelector(".post-head").onclick = () => openDjProfile(dj.id);
-    container.appendChild(el);
+  relevant.forEach((post, i) => {
+    container.appendChild(buildPostCard(post));
+    // Werbe-Post nach dem 2. Beitrag einstreuen (entfällt bei aktivem Pro-Abo)
+    if(adsActive && i === 1){ container.appendChild(buildAdCard()); }
   });
+
+  // Falls weniger als 2 Beiträge vorhanden sind, Werbung trotzdem ans Ende hängen
+  if(adsActive && relevant.length < 2){
+    container.appendChild(buildAdCard());
+  }
+}
+
+function buildPostCard(post){
+  const dj = getDj(post.djId);
+  const el = document.createElement("div");
+  el.className = "post-card";
+  el.innerHTML = `
+    <div class="post-head">
+      <div class="avatar round" style="background:${dj.color};">${dj.name.split(" ").map(w=>w[0]).join("").slice(0,2)}</div>
+      <div class="who"><div class="n">${dj.name}</div><div class="t">${post.time}</div></div>
+    </div>
+    <div class="post-text">${post.text}</div>
+    <div class="post-footer">
+      <span class="likebtn ${post.liked ? 'liked' : ''}" onclick="toggleLike(${post.id})">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="${post.liked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">${ICONS.heart}</svg> ${post.likes}
+      </span>
+    </div>`;
+  el.querySelector(".post-head").onclick = () => openDjProfile(dj.id);
+  return el;
+}
+
+// Werbe-Post-Karte: klar als "Anzeige" gekennzeichnet, nicht an einen DJ gebunden
+function buildAdCard(){
+  const el = document.createElement("div");
+  el.className = "post-card ad";
+  el.innerHTML = `
+    <div class="post-head">
+      <div class="avatar round ad-avatar">📢</div>
+      <div class="who"><div class="n">${feedAd.sponsor}</div><div class="t">Anzeige</div></div>
+    </div>
+    <div class="post-text">${feedAd.text}</div>`;
+  return el;
 }
 
 function toggleLike(postId){
@@ -1215,6 +1530,49 @@ function openDjProfile(djId){
     </div>
   `;
   openOverlay("overlay-dj-profile");
+}
+
+// Wechselt innerhalb des Feed-Tabs zwischen "Feed" und "Meine Anfragen"
+function switchUserFeedSubtab(which){
+  document.getElementById("subtab-feed-btn").classList.toggle("active", which === "feed");
+  document.getElementById("subtab-requests-btn").classList.toggle("active", which === "requests");
+  document.getElementById("user-feed-panel").style.display = which === "feed" ? "" : "none";
+  document.getElementById("user-requests-panel").style.display = which === "requests" ? "" : "none";
+  if(which === "requests") renderMyRequests();
+}
+
+// Liste der vom Nutzer selbst gesendeten Buchungsanfragen (für "Meine Anfragen")
+function renderMyRequests(){
+  const container = document.getElementById("my-requests-list");
+  const mine = bookingRequests.filter(r => r.requester === "Du");
+  container.innerHTML = "";
+
+  if(mine.length === 0){
+    container.innerHTML = `<div class="empty-state">
+      <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">${ICONS.inbox}</svg>
+      <p>Du hast noch keine Buchungsanfrage gesendet.</p>
+    </div>`;
+    return;
+  }
+
+  mine.forEach(req => {
+    const dj = getDj(req.djId);
+    const dateFormatted = new Date(req.date).toLocaleDateString("de-DE", {day:"2-digit", month:"2-digit", year:"numeric"});
+    const el = document.createElement("div");
+    el.className = "request-card";
+    el.innerHTML = `
+      <div class="request-top">
+        <span class="n">${dj.name}</span>
+        <span class="status-badge ${req.status}">${req.status === "bestaetigt" ? "Bestätigt" : req.status === "abgelehnt" ? "Abgelehnt" : "Offen"}</span>
+      </div>
+      <div class="request-details">
+        <div><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ICONS.clock}</svg> ${req.eventType} · ${req.genre} · ${req.duration} Std. · ${dateFormatted}, ${req.time} Uhr</div>
+        <div><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ICONS.location}</svg> ${req.location}</div>
+      </div>
+      <button class="btn btn-outline btn-sm" style="width:100%;" onclick="openChat(${req.id})">💬 Chat mit ${dj.name}</button>
+    `;
+    container.appendChild(el);
+  });
 }
 
 /* =======================================================================
@@ -1310,9 +1668,12 @@ function renderDjRequests(){
         <span class="status-badge ${req.status}">${req.status === "bestaetigt" ? "Bestätigt" : req.status === "abgelehnt" ? "Abgelehnt" : "Offen"}</span>
       </div>
       <div class="request-details">
-        <div><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ICONS.clock}</svg> ${req.eventType} · ${dateFormatted}, ${req.time} Uhr</div>
+        <div><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ICONS.clock}</svg> ${req.eventType} · ${req.genre} · ${req.duration} Std. · ${dateFormatted}, ${req.time} Uhr</div>
         <div><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ICONS.location}</svg> ${req.location}</div>
         ${req.message ? `<div>„${req.message}“</div>` : ""}
+      </div>
+      <div class="btn-row" style="margin-bottom:${req.status === "offen" ? "8px" : "0"};">
+        <button class="btn btn-outline btn-sm" style="flex:1;" onclick="openChat(${req.id})">💬 Chat mit ${req.requester}</button>
       </div>
       ${req.status === "offen" ? `
         <div class="btn-row">
@@ -1328,6 +1689,8 @@ function updateRequestStatus(id, status){
   const req = bookingRequests.find(r => r.id === id);
   req.status = status;
   renderDjRequests();
+  renderMyRequests();
+  renderCalendar(); // bestätigte Buchungen blockieren den Tag automatisch im Kalender
   showToast(status === "bestaetigt" ? "Anfrage bestätigt ✓" : "Anfrage abgelehnt");
 }
 
@@ -1338,7 +1701,7 @@ function renderSelfProfile(){
   const dj = getDj(state.loggedInDjId);
   document.getElementById("dj-self-avatar").style.background = dj.color;
   document.getElementById("dj-self-avatar").textContent = dj.name.split(" ").map(w=>w[0]).join("").slice(0,2);
-  document.getElementById("dj-self-name").textContent = dj.name;
+  document.getElementById("dj-self-name").innerHTML = dj.name + (dj.isPro ? ' <span class="badge-pro">PRO</span>' : '');
   document.getElementById("dj-self-genre").textContent = dj.genres.join(" · ") + " · " + dj.city;
   document.getElementById("dj-self-followers").textContent = formatFollowers(dj.followers);
   document.getElementById("dj-self-rating").textContent = dj.rating + " ★";
@@ -1376,6 +1739,184 @@ function postAnnouncement(){
   textarea.value = "";
   renderFeed();
   showToast("Beitrag veröffentlicht ✓");
+}
+
+/* =======================================================================
+   BEATSPOT PRO (Abo-Simulation)
+   ======================================================================= */
+function openProOverlay(){
+  renderProOverlay();
+  openOverlay("overlay-pro");
+}
+
+function renderProOverlay(){
+  const dj = getDj(state.loggedInDjId);
+  document.getElementById("pro-body").innerHTML = `
+    <div class="profile-hero" style="margin-bottom:16px;">
+      <div style="font-size:40px;">🚀</div>
+      <h3>BeatSpot Pro</h3>
+      <p class="subtle-text" style="margin:0;">Hol dir mehr Sichtbarkeit & Buchungen.</p>
+    </div>
+    <div class="info-block">
+      <div class="pro-compare-row head"><span></span><span>Free</span><span>Pro</span></div>
+      <div class="pro-compare-row"><span>Werbefreie Nutzung</span><span>✕</span><span>✓</span></div>
+      <div class="pro-compare-row"><span>Top-Platzierung in der Suche</span><span>✕</span><span>✓</span></div>
+      <div class="pro-compare-row"><span>Erweiterte Statistiken</span><span>✕</span><span>✓</span></div>
+      <div class="pro-compare-row"><span>Preis / Monat</span><span>0 €</span><span>19 €</span></div>
+    </div>
+    ${dj.isPro
+      ? `<p class="subtle-text" style="text-align:center; margin-bottom:14px;">Du bist bereits Pro-Mitglied ✓</p>
+         <button class="btn btn-outline" onclick="cancelPro()">Pro-Abo kündigen</button>`
+      : `<button class="btn btn-pro" style="margin-bottom:0;" onclick="subscribePro()">Pro abonnieren</button>`}
+  `;
+}
+
+// Simulierter Abo-Abschluss: kein echtes Zahlungssystem, nur Status im state
+function subscribePro(){
+  getDj(state.loggedInDjId).isPro = true;
+  renderProOverlay();
+  renderSelfProfile();
+  renderDjList();
+  renderFeed();
+  showToast("Willkommen bei BeatSpot Pro! 🚀");
+}
+
+function cancelPro(){
+  getDj(state.loggedInDjId).isPro = false;
+  renderProOverlay();
+  renderSelfProfile();
+  renderDjList();
+  renderFeed();
+  showToast("Pro-Abo gekündigt");
+}
+
+/* =======================================================================
+   KALENDER (DJ-Verfügbarkeit)
+   ======================================================================= */
+const CURRENT_DATE_STR = "2026-07-02"; // Referenzdatum für "vergangene Tage" im Kalender
+
+function renderCalendar(){
+  const dj = getDj(state.loggedInDjId);
+  const { year, month } = state.calendarMonth;
+  const monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+  document.getElementById("calendar-month-label").textContent = monthNames[month] + " " + year;
+
+  const grid = document.getElementById("calendar-grid");
+  grid.innerHTML = "";
+
+  ["Mo","Di","Mi","Do","Fr","Sa","So"].forEach(d => {
+    const h = document.createElement("div");
+    h.className = "calendar-weekday";
+    h.textContent = d;
+    grid.appendChild(h);
+  });
+
+  // Montag als ersten Wochentag berechnen (JS: 0=So..6=Sa)
+  const offset = (new Date(year, month, 1).getDay() + 6) % 7;
+  for(let i = 0; i < offset; i++){
+    const filler = document.createElement("div");
+    filler.className = "calendar-day empty";
+    grid.appendChild(filler);
+  }
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  for(let day = 1; day <= daysInMonth; day++){
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const isPast = dateStr < CURRENT_DATE_STR;
+    const booked = isDateBookedForDj(dj.id, dateStr);
+    const blocked = dj.blockedDates.includes(dateStr);
+
+    const cell = document.createElement("div");
+    cell.className = "calendar-day" + (isPast ? " past" : "") + (booked ? " booked" : blocked ? " blocked" : "");
+    cell.textContent = day;
+    if(!isPast && !booked){
+      cell.onclick = () => toggleBlockedDate(dateStr);
+    }
+    grid.appendChild(cell);
+  }
+}
+
+function changeCalendarMonth(delta){
+  let { year, month } = state.calendarMonth;
+  month += delta;
+  if(month < 0){ month = 11; year--; }
+  if(month > 11){ month = 0; year++; }
+  state.calendarMonth = { year, month };
+  renderCalendar();
+}
+
+// Manuelles Blockieren/Freigeben eines Tages durch den DJ
+function toggleBlockedDate(dateStr){
+  const dj = getDj(state.loggedInDjId);
+  const idx = dj.blockedDates.indexOf(dateStr);
+  if(idx === -1){
+    dj.blockedDates.push(dateStr);
+    showToast("Tag blockiert");
+  } else {
+    dj.blockedDates.splice(idx, 1);
+    showToast("Tag freigegeben");
+  }
+  renderCalendar();
+}
+
+/* =======================================================================
+   CHAT (pro Buchungsanfrage)
+   ======================================================================= */
+function openChat(requestId){
+  state.activeChatRequestId = requestId;
+  const req = bookingRequests.find(r => r.id === requestId);
+  const dj = getDj(req.djId);
+  const partnerName = state.role === "dj" ? req.requester : dj.name;
+  document.getElementById("chat-title").textContent = "Chat mit " + partnerName;
+
+  if(!chatMessages[requestId]) chatMessages[requestId] = [];
+  renderChatMessages();
+  document.getElementById("chat-input").value = "";
+  openOverlay("overlay-chat");
+}
+
+function renderChatMessages(){
+  const id = state.activeChatRequestId;
+  const container = document.getElementById("chat-messages");
+  const msgs = chatMessages[id] || [];
+  container.innerHTML = "";
+
+  if(msgs.length === 0){
+    container.innerHTML = `<div class="empty-state" style="padding-top:60px;"><p>Noch keine Nachrichten. Schreib die erste!</p></div>`;
+  } else {
+    msgs.forEach(m => {
+      const bubble = document.createElement("div");
+      bubble.className = "chat-bubble " + (m.sender === state.role ? "mine" : "theirs");
+      bubble.innerHTML = `${m.text}<span class="time">${m.time}</span>`;
+      container.appendChild(bubble);
+    });
+  }
+  container.scrollTop = container.scrollHeight;
+}
+
+function sendChatMessage(){
+  const input = document.getElementById("chat-input");
+  const text = input.value.trim();
+  if(!text) return;
+
+  const id = state.activeChatRequestId;
+  if(!chatMessages[id]) chatMessages[id] = [];
+  chatMessages[id].push({ sender: state.role, text, time: "gerade eben" });
+  input.value = "";
+  renderChatMessages();
+
+  // Simulierte Antwort der Gegenseite nach kurzer Verzögerung, damit der Chat lebendig wirkt
+  const replySender = state.role === "user" ? "dj" : "user";
+  setTimeout(() => {
+    chatMessages[id].push({
+      sender: replySender,
+      text: AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)],
+      time: "gerade eben",
+    });
+    if(state.activeChatRequestId === id && document.getElementById("overlay-chat").classList.contains("open")){
+      renderChatMessages();
+    }
+  }, 1400);
 }
 
 /* =======================================================================
