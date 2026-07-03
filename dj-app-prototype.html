@@ -788,6 +788,46 @@
     gap:10px; text-align:center; padding:26px;
   }
   .stack-empty h3{ margin:0; font-size:17px; }
+
+  /* ===================== Feature C: Story-Upload (Fotos & Videos) ===================== */
+  .story-avatar-wrap{ position:relative; }
+  .story-add-badge{
+    position:absolute; right:-3px; bottom:-3px;
+    width:20px; height:20px; border-radius:50%;
+    background:linear-gradient(135deg, var(--neon-magenta), var(--neon-violet));
+    color:#fff; font-size:14px; font-weight:800; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+    border:2px solid var(--bg-app);
+  }
+  /* Medien im Story-Viewer: liegen hinter den Tap-Zonen, Caption & Ton-Button darüber */
+  .story-media{ position:absolute; inset:0; width:100%; height:100%; background:#000; }
+  img.story-media{ object-fit:cover; }
+  video.story-media{ object-fit:contain; }
+  .story-media-caption{
+    position:absolute; left:24px; right:24px; bottom:56px; z-index:2;
+    color:#fff; font-size:15px; font-weight:600; line-height:1.45; text-align:center;
+    background:rgba(0,0,0,0.38); border-radius:12px; padding:9px 12px;
+    text-shadow:0 2px 12px rgba(0,0,0,0.7); pointer-events:none;
+  }
+  .story-sound-btn{
+    position:absolute; top:12px; right:12px; z-index:3;
+    width:38px; height:38px; border-radius:50%; border:none;
+    background:rgba(0,0,0,0.55); color:#fff; font-size:16px;
+  }
+  .story-sound-btn:active{ transform:scale(0.9); }
+  /* Vorschau im "Story hinzufügen"-Formular */
+  .story-media-preview{
+    position:relative; border-radius:14px; overflow:hidden;
+    border:1px solid var(--border-subtle); margin-bottom:10px; background:#000;
+  }
+  .story-media-preview img, .story-media-preview video{
+    width:100%; max-height:240px; object-fit:contain; display:block;
+  }
+  .story-media-remove{
+    position:absolute; top:8px; right:8px;
+    width:30px; height:30px; border-radius:50%; border:none;
+    background:rgba(0,0,0,0.6); color:#fff; font-size:14px;
+  }
 </style>
 </head>
 <body>
@@ -1236,24 +1276,30 @@
       <div class="overlay-body" id="settings-body"></div>
     </section>
 
-    <!-- ===================== OVERLAY: Story hinzufügen (DJ) ===================== -->
+    <!-- ===================== OVERLAY: Story hinzufügen (alle Rollen) ===================== -->
     <section class="overlay" id="overlay-add-story">
       <div class="overlay-header">
-        <button class="back-btn" onclick="closeOverlay('overlay-add-story')">
+        <button class="back-btn" onclick="cancelAddStoryForm()">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
         <h2>Story hinzufügen</h2>
       </div>
       <div class="overlay-body">
         <div class="form-group">
-          <label>Text</label>
-          <textarea id="story-form-text" placeholder="Was gibt's Neues?"></textarea>
+          <label>Foto oder Video (optional)</label>
+          <input type="file" id="story-media-input" accept="image/*,video/*" style="display:none;" onchange="handleStoryMediaSelect(event)">
+          <div class="story-media-preview" id="story-media-preview" style="display:none;"></div>
+          <button class="btn btn-outline" type="button" onclick="document.getElementById('story-media-input').click()">📷 Foto / Video auswählen</button>
         </div>
         <div class="form-group">
+          <label id="story-text-label">Text</label>
+          <textarea id="story-form-text" placeholder="Was gibt's Neues?"></textarea>
+        </div>
+        <div class="form-group" id="story-bg-group">
           <label>Hintergrund</label>
           <div class="color-swatch-row" id="story-bg-row"></div>
         </div>
-        <div class="form-group">
+        <div class="form-group" id="story-emoji-group">
           <label>Emoji</label>
           <div class="chip-row" id="story-emoji-row"></div>
         </div>
@@ -1455,23 +1501,43 @@ const events = [
   { id: 5, name: "Dark Matter", location: "Bunker Club", city: "Köln", dayLabel: "Sa", time: "00:00", lineup: ["Nightshade", "Electra Vibe"], entry: 18, x: 14, y: 68 },
 ];
 
-// Stories je DJ-ID (hoursAgo: simulierte Stunden seit Veröffentlichung, aktiv solange < 24)
-let storiesByDj = {
-  1: [
-    { id: 1, text: "Warmup läuft, gleich geht's los! 🔥", background: "linear-gradient(135deg,#ff2ee6,#8a3ffc)", emoji: "🎧", hoursAgo: 3, seen: false },
+// Rollenübergreifende Stories (Feature C): Schlüssel sind Entity-Keys statt reiner DJ-IDs.
+// "dj-<id>" = DJ · "user-self" = Partygänger-Persona · "host-self" = Gastgeber-Persona ·
+// "guest-<n>" = Mock-Partygänger. Nutzer-Stories sind für ALLE sichtbar (Ziel: Partys verbreiten).
+// mediaType "none"|"image"|"video"; mediaUrl = Object-URL bei hochgeladenen Fotos/Videos.
+// hoursAgo: simulierte Stunden seit Veröffentlichung, aktiv solange < 24 (Instagram-Ablauflogik).
+let storiesByEntity = {
+  "dj-1": [
+    { id: 1, text: "Warmup läuft, gleich geht's los! 🔥", background: "linear-gradient(135deg,#ff2ee6,#8a3ffc)", emoji: "🎧", mediaType: "none", mediaUrl: null, hoursAgo: 3, seen: false },
   ],
-  2: [
-    { id: 2, text: "Sound-Check für den Rooftop-Gig ☀️", background: "linear-gradient(135deg,#2ef2ff,#8a3ffc)", emoji: "🌅", hoursAgo: 6, seen: false },
+  "dj-2": [
+    { id: 2, text: "Sound-Check für den Rooftop-Gig ☀️", background: "linear-gradient(135deg,#2ef2ff,#8a3ffc)", emoji: "🌅", mediaType: "none", mediaUrl: null, hoursAgo: 6, seen: false },
   ],
-  4: [
-    { id: 3, text: "Bühne ist bereit! 🎆", background: "linear-gradient(135deg,#8a3ffc,#2ef2ff)", emoji: "🎆", hoursAgo: 10, seen: false },
-    { id: 4, text: "Noch 2 Stunden bis Showtime!", background: "linear-gradient(135deg,#ffb020,#ff2ee6)", emoji: "⏰", hoursAgo: 9, seen: false },
+  "dj-4": [
+    { id: 3, text: "Bühne ist bereit! 🎆", background: "linear-gradient(135deg,#8a3ffc,#2ef2ff)", emoji: "🎆", mediaType: "none", mediaUrl: null, hoursAgo: 10, seen: false },
+    { id: 4, text: "Noch 2 Stunden bis Showtime!", background: "linear-gradient(135deg,#ffb020,#ff2ee6)", emoji: "⏰", mediaType: "none", mediaUrl: null, hoursAgo: 9, seen: false },
   ],
-  6: [
-    { id: 5, text: "Dark Vibes only tonight 🖤", background: "linear-gradient(135deg,#6f6484,#ff2ee6)", emoji: "🌑", hoursAgo: 2, seen: false },
+  "dj-6": [
+    { id: 5, text: "Dark Vibes only tonight 🖤", background: "linear-gradient(135deg,#6f6484,#ff2ee6)", emoji: "🌑", mediaType: "none", mediaUrl: null, hoursAgo: 2, seen: false },
+  ],
+  "guest-1": [
+    { id: 6, text: "Heute Abend Neon Nights im Warehouse 9 – wer ist dabei? 🎉", background: "linear-gradient(135deg,#33e6a0,#2ef2ff)", emoji: "🎉", mediaType: "none", mediaUrl: null, hoursAgo: 1, seen: false },
   ],
 };
-let nextStoryId = 6;
+let nextStoryId = 7;
+
+// Mock-Partygänger, die Stories posten (demonstriert Feature C aus Sicht anderer Nutzer)
+const GUEST_ENTITIES = {
+  "guest-1": { name: "Sarah M.", color: "linear-gradient(135deg,#ffb020,#33e6a0)", emoji: "🎉" },
+};
+
+// Demo-Gastgeber-Persona (Rolle "host", Feature E) – kann ebenfalls Stories posten (Feature C)
+let hostProfile = {
+  name: "Marlene K.",
+  bio: "Ich vermiete meine Rooftop-Bar und meinen Garten für Events – Anfragen willkommen!",
+  avatar: { color: "linear-gradient(135deg,#33e6a0,#ffb020)", emoji: "🏠" },
+  isPro: false,
+};
 
 // Feed-Posts der DJs
 let feedPosts = [
@@ -1534,6 +1600,7 @@ const state = {
   userAvatar: { color: "linear-gradient(135deg,#2ef2ff,#33e6a0)", emoji: "🙂" },
   newStoryBackground: null,
   newStoryEmoji: null,
+  newStoryMedia: null,       // { url: Object-URL, type: "image"|"video" } vor dem Posten
   storyViewer: { entityKey: null, stories: [], index: 0 },
   storyTimer: null,
   // Feature A: Tinder-Discovery. mode: "stack" (Karten) oder "list" (klassische Liste).
@@ -2273,25 +2340,59 @@ function finishBookingFlow(){
 function renderFollowScroll(){
   const container = document.getElementById("follow-scroll");
   container.innerHTML = "";
-  djs.forEach(dj => {
-    const isFollowed = state.followed.has(dj.id);
-    const activeStories = getActiveStories(dj.id);
 
-    // Ring-Zustand: ungesehene Story > gesehene Story > gefolgt > Standard
-    let ringClass = "";
-    if(activeStories.length > 0 && activeStories.some(s => !s.seen)) ringClass = " has-story-unseen";
-    else if(activeStories.length > 0) ringClass = " has-story-seen";
-    else if(isFollowed) ringClass = " is-followed";
+  // 1) Eigene Story-Kachel ("Deine Story" mit Plus-Badge, Instagram-Vorbild)
+  container.appendChild(buildOwnStoryTile());
 
-    const item = document.createElement("div");
-    item.className = "follow-item" + ringClass;
-    item.innerHTML = `<div class="avatar round" style="background:${avatarBg(dj)};">${avatarContent(dj)}</div><span>${dj.name}</span>`;
-    item.onclick = () => {
-      if(activeStories.length > 0) openStoryViewer(dj.id);
-      else openDjProfile(dj.id);
-    };
-    container.appendChild(item);
+  // 2) Andere Nicht-DJ-Entities mit aktiven Stories (Mock-Partygänger, Gastgeberin)
+  [...Object.keys(GUEST_ENTITIES), "host-self"].forEach(key => {
+    if(key === selfStoryEntityKey()) return; // eigene Kachel existiert bereits
+    if(getActiveStoriesByKey(key).length > 0) container.appendChild(buildStoryTile(key));
   });
+
+  // 3) Alle DJs (bisheriges Verhalten: Ring nach Story-/Folge-Status)
+  djs.forEach(dj => container.appendChild(buildStoryTile("dj-" + dj.id)));
+}
+
+// Baut eine Kachel der Follow-/Story-Leiste für einen beliebigen Entity-Key
+function buildStoryTile(key){
+  const info = storyEntityInfo(key);
+  const activeStories = getActiveStoriesByKey(key);
+  const isDj = key.startsWith("dj-");
+  const djId = isDj ? Number(key.slice(3)) : null;
+
+  // Ring-Zustand: ungesehene Story > gesehene Story > gefolgt > Standard
+  let ringClass = "";
+  if(activeStories.length > 0 && activeStories.some(s => !s.seen)) ringClass = " has-story-unseen";
+  else if(activeStories.length > 0) ringClass = " has-story-seen";
+  else if(isDj && state.followed.has(djId)) ringClass = " is-followed";
+
+  const item = document.createElement("div");
+  item.className = "follow-item" + ringClass;
+  item.innerHTML = `<div class="story-avatar-wrap"><div class="avatar round" style="background:${info.color};">${info.content}</div></div><span>${info.name}</span>`;
+  item.onclick = () => {
+    if(activeStories.length > 0) openStoryViewer(key);
+    else if(isDj) openDjProfile(djId);
+  };
+  return item;
+}
+
+// Kachel der eigenen Persona: öffnet den Viewer (falls Stories aktiv) oder das Story-Formular
+function buildOwnStoryTile(){
+  const key = selfStoryEntityKey();
+  const info = storyEntityInfo(key);
+  const active = getActiveStoriesByKey(key);
+  const ringClass = active.length > 0 ? (active.some(s => !s.seen) ? " has-story-unseen" : " has-story-seen") : "";
+
+  const item = document.createElement("div");
+  item.className = "follow-item" + ringClass;
+  item.innerHTML = `<div class="story-avatar-wrap"><div class="avatar round" style="background:${info.color};">${info.content}</div><span class="story-add-badge">+</span></div><span>Deine Story</span>`;
+  item.onclick = (e) => {
+    if(e.target.classList.contains("story-add-badge")){ openAddStoryForm(); return; }
+    if(active.length > 0) openStoryViewer(key);
+    else openAddStoryForm();
+  };
+  return item;
 }
 
 function renderFeed(){
@@ -3218,18 +3319,104 @@ function refreshAllAvatarDependentViews(){
 
 /* =======================================================================
    STORIES (wie Instagram, 24 Std. simuliert aktiv)
+   Feature C: rollenübergreifend (DJ, Partygänger, Gastgeber) + Foto-/Video-Upload
    ======================================================================= */
-function getActiveStories(djId){
-  return (storiesByDj[djId] || []).filter(s => s.hoursAgo < 24).sort((a, b) => b.hoursAgo - a.hoursAgo);
+// Löst einen Entity-Key in Anzeigedaten (Name, Avatar) auf
+function storyEntityInfo(key){
+  if(key.startsWith("dj-")){
+    const dj = getDj(Number(key.slice(3)));
+    return dj ? { name: dj.name, color: avatarBg(dj), content: avatarContent(dj) } : null;
+  }
+  if(key === "user-self"){
+    return {
+      name: state.userDisplayName === "Du" ? "Du" : state.userDisplayName,
+      color: state.userAvatar.color,
+      content: state.userAvatar.emoji || initialsFromName(state.userDisplayName),
+    };
+  }
+  if(key === "host-self"){
+    return { name: hostProfile.name, color: hostProfile.avatar.color, content: hostProfile.avatar.emoji || initialsFromName(hostProfile.name) };
+  }
+  const guest = GUEST_ENTITIES[key];
+  return guest ? { name: guest.name, color: guest.color, content: guest.emoji } : null;
 }
 
-function openAddStoryForm(){
-  document.getElementById("story-form-text").value = "";
+// Entity-Key der aktuell aktiven Persona (abhängig von der Rolle)
+function selfStoryEntityKey(){
+  if(state.role === "dj") return "dj-" + state.loggedInDjId;
+  if(state.role === "host") return "host-self";
+  return "user-self";
+}
+
+function getActiveStoriesByKey(key){
+  return (storiesByEntity[key] || []).filter(s => s.hoursAgo < 24).sort((a, b) => b.hoursAgo - a.hoursAgo);
+}
+
+// Bestehende Aufrufer mit DJ-IDs bleiben gültig (z.B. Story-Ringe auf DJ-Avataren)
+function getActiveStories(djId){
+  return getActiveStoriesByKey("dj-" + djId);
+}
+
+function openAddStoryForm(prefillText){
+  document.getElementById("story-form-text").value = prefillText || "";
   state.newStoryBackground = STORY_BACKGROUNDS[0];
   state.newStoryEmoji = STORY_EMOJIS[0];
+  clearStoryMedia();
   buildStoryBgRow();
   buildStoryEmojiRow();
   openOverlay("overlay-add-story");
+}
+
+// Zurück-Button des Formulars: verworfene Medien aufräumen, dann schließen
+function cancelAddStoryForm(){
+  clearStoryMedia();
+  closeOverlay("overlay-add-story");
+}
+
+/* ---- Medien-Upload (Object-URLs; Revoke bei Verwerfen gegen Memory-Leaks) ---- */
+function handleStoryMediaSelect(e){
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  if(state.newStoryMedia) URL.revokeObjectURL(state.newStoryMedia.url); // ersetztes Medium freigeben
+  state.newStoryMedia = {
+    url: URL.createObjectURL(file),
+    type: file.type.startsWith("video") ? "video" : "image",
+  };
+  renderStoryMediaPreview();
+}
+
+function clearStoryMedia(){
+  if(state.newStoryMedia){
+    URL.revokeObjectURL(state.newStoryMedia.url);
+    state.newStoryMedia = null;
+  }
+  const input = document.getElementById("story-media-input");
+  if(input) input.value = "";
+  renderStoryMediaPreview();
+}
+
+// Vorschau im Formular; bei gewähltem Medium werden Hintergrund/Emoji-Auswahl ausgeblendet
+function renderStoryMediaPreview(){
+  const preview = document.getElementById("story-media-preview");
+  const media = state.newStoryMedia;
+  document.getElementById("story-bg-group").style.display = media ? "none" : "";
+  document.getElementById("story-emoji-group").style.display = media ? "none" : "";
+  document.getElementById("story-text-label").textContent = media ? "Text-Overlay auf dem Medium (optional)" : "Text";
+
+  if(!media){
+    preview.style.display = "none";
+    preview.innerHTML = "";
+    return;
+  }
+  preview.style.display = "";
+  preview.innerHTML = media.type === "video"
+    ? `<video src="${media.url}" muted loop autoplay playsinline></video>`
+    : `<img src="${media.url}" alt="Vorschau">`;
+  const removeBtn = document.createElement("button");
+  removeBtn.className = "story-media-remove";
+  removeBtn.textContent = "✕";
+  removeBtn.onclick = clearStoryMedia;
+  preview.appendChild(removeBtn);
 }
 
 function buildStoryBgRow(){
@@ -3266,47 +3453,97 @@ function buildStoryEmojiRow(){
 
 function submitStory(){
   const text = document.getElementById("story-form-text").value.trim();
-  if(!text){
-    showToast("Bitte gib einen Text ein.");
+  const media = state.newStoryMedia;
+  if(!text && !media){
+    showToast("Bitte Text eingeben oder Foto/Video wählen.");
     return;
   }
-  const djId = state.loggedInDjId;
-  if(!storiesByDj[djId]) storiesByDj[djId] = [];
-  storiesByDj[djId].unshift({
+
+  const key = selfStoryEntityKey();
+  if(!storiesByEntity[key]) storiesByEntity[key] = [];
+  storiesByEntity[key].unshift({
     id: nextStoryId++,
     text,
-    background: state.newStoryBackground,
-    emoji: state.newStoryEmoji,
+    background: media ? "#000" : state.newStoryBackground,
+    emoji: media ? null : state.newStoryEmoji,
+    mediaType: media ? media.type : "none",
+    mediaUrl: media ? media.url : null,
     hoursAgo: 0,
     seen: false,
   });
+
+  // Besitz der Object-URL geht an die Story über → hier KEIN revoke
+  state.newStoryMedia = null;
+  document.getElementById("story-media-input").value = "";
   closeOverlay("overlay-add-story");
   renderFollowScroll();
   showToast("Story gepostet! 📸");
 }
 
-function openStoryViewer(djId){
-  const stories = getActiveStories(djId);
+const STORY_SLIDE_SECONDS = 5; // Anzeigedauer für Bild-/Text-Slides; Videos laufen in voller Länge
+
+function openStoryViewer(keyOrDjId){
+  // Abwärtskompatibel: numerische DJ-IDs werden auf Entity-Keys abgebildet
+  const entityKey = typeof keyOrDjId === "number" ? "dj-" + keyOrDjId : keyOrDjId;
+  const stories = getActiveStoriesByKey(entityKey);
   if(stories.length === 0) return;
-  state.storyViewer = { djId, stories, index: 0 };
+  state.storyViewer = { entityKey, stories, index: 0 };
   openOverlay("overlay-story-viewer");
   renderStorySlide();
 }
 
 function renderStorySlide(){
-  const { djId, stories, index } = state.storyViewer;
-  const dj = getDj(djId);
+  const { entityKey, stories, index } = state.storyViewer;
+  const info = storyEntityInfo(entityKey);
   const story = stories[index];
   story.seen = true; // als gesehen markieren, sobald sie angezeigt wird
 
-  document.getElementById("story-avatar").style.background = avatarBg(dj);
-  document.getElementById("story-avatar").textContent = avatarContent(dj);
-  document.getElementById("story-dj-name").textContent = dj.name;
-  document.getElementById("story-time").textContent = "vor " + story.hoursAgo + " Std.";
-  document.getElementById("story-content").style.background = story.background;
-  document.getElementById("story-slide-body").innerHTML = `<div class="story-emoji">${story.emoji || ""}</div><div class="story-text">${story.text}</div>`;
+  const avatarEl = document.getElementById("story-avatar");
+  avatarEl.style.background = info.color;
+  avatarEl.textContent = info.content;
+  document.getElementById("story-dj-name").textContent = info.name;
+  document.getElementById("story-time").textContent = story.hoursAgo === 0 ? "gerade eben" : "vor " + story.hoursAgo + " Std.";
 
-  // Fortschrittsbalken passend zur Anzahl der Stories dieses DJs neu aufbauen
+  const content = document.getElementById("story-content");
+  const body = document.getElementById("story-slide-body");
+  clearTimeout(state.storyTimer);
+
+  if(story.mediaType === "image"){
+    // Hochgeladenes Foto: 5 Sek. Anzeige, optionales Text-Overlay
+    content.style.background = "#000";
+    body.innerHTML = `<img class="story-media" src="${story.mediaUrl}" alt="">`
+      + (story.text ? `<div class="story-media-caption">${story.text}</div>` : "");
+    setStoryProgress(STORY_SLIDE_SECONDS);
+    state.storyTimer = setTimeout(storyNext, STORY_SLIDE_SECONDS * 1000);
+  } else if(story.mediaType === "video"){
+    // Hochgeladenes Video: läuft in voller Länge, stumm; Tap auf 🔇 aktiviert den Ton
+    content.style.background = "#000";
+    body.innerHTML = `<video class="story-media" id="story-video" src="${story.mediaUrl}" autoplay muted playsinline></video>`
+      + (story.text ? `<div class="story-media-caption">${story.text}</div>` : "")
+      + `<button class="story-sound-btn" id="story-sound-btn" onclick="toggleStoryVideoSound()">🔇</button>`;
+    setStoryProgress(null); // Dauer erst bekannt, wenn Metadaten geladen sind
+    const video = document.getElementById("story-video");
+    video.addEventListener("loadedmetadata", () => {
+      if(isFinite(video.duration) && video.duration > 0) setStoryProgress(video.duration);
+    });
+    video.addEventListener("ended", storyNext);
+    // Fallback: nicht abspielbares Video (z.B. Codec) blockiert den Viewer nicht
+    state.storyTimer = setTimeout(storyNext, 8000);
+    video.addEventListener("playing", () => clearTimeout(state.storyTimer), { once: true });
+  } else {
+    // Klassische Text-/Emoji-Story auf Farbverlauf
+    content.style.background = story.background;
+    body.innerHTML = `<div class="story-emoji">${story.emoji || ""}</div><div class="story-text">${story.text}</div>`;
+    setStoryProgress(STORY_SLIDE_SECONDS);
+    state.storyTimer = setTimeout(storyNext, STORY_SLIDE_SECONDS * 1000);
+  }
+
+  renderFollowScroll(); // Ring-Status (gesehen/ungesehen) aktualisieren
+}
+
+// Fortschrittsbalken neu aufbauen; durationSec = null → Balken wartet (Video-Metadaten ausstehend)
+function setStoryProgress(durationSec){
+  const { stories, index } = state.storyViewer;
   const row = document.getElementById("story-progress-row");
   row.innerHTML = "";
   stories.forEach((s, i) => {
@@ -3314,15 +3551,18 @@ function renderStorySlide(){
     seg.className = "story-progress-seg";
     const fill = document.createElement("div");
     fill.className = "fill" + (i < index ? " done" : "");
-    if(i === index){ fill.style.animation = "storyFill 4s linear forwards"; }
+    if(i === index && durationSec){ fill.style.animation = `storyFill ${durationSec}s linear forwards`; }
     seg.appendChild(fill);
     row.appendChild(seg);
   });
+}
 
-  renderFollowScroll(); // Ring-Status (gesehen/ungesehen) aktualisieren
-
-  clearTimeout(state.storyTimer);
-  state.storyTimer = setTimeout(storyNext, 4000);
+function toggleStoryVideoSound(){
+  const video = document.getElementById("story-video");
+  const btn = document.getElementById("story-sound-btn");
+  if(!video || !btn) return;
+  video.muted = !video.muted;
+  btn.textContent = video.muted ? "🔇" : "🔊";
 }
 
 function storyNext(){
@@ -3345,6 +3585,7 @@ function storyPrev(){
 
 function closeStoryViewer(){
   clearTimeout(state.storyTimer);
+  document.getElementById("story-slide-body").innerHTML = ""; // stoppt ein ggf. laufendes Video
   closeOverlay("overlay-story-viewer");
   renderFollowScroll();
 }
