@@ -707,6 +707,87 @@
     position:relative; z-index:2; color:#fff; font-size:16px; font-weight:600;
     line-height:1.5; max-width:280px; text-shadow:0 2px 10px rgba(0,0,0,0.45);
   }
+
+  /* ===================== Feature A: Tinder-Style Discovery (Card-Stack) ===================== */
+  /* Im Stack-Modus wird der Such-Tab zur nicht scrollenden Flex-Spalte, der Stack füllt den Rest */
+  #tab-1-user.stack-mode.active{
+    display:flex; flex-direction:column; overflow:hidden;
+    padding-bottom:14px;
+  }
+  .dj-stack-wrap{
+    position:relative; flex:1 1 auto; min-height:300px; margin-top:10px;
+  }
+  .stack-counter{ font-weight:400; color:var(--text-muted); font-size:12px; }
+  .swipe-card{
+    position:absolute; inset:0;
+    border-radius:24px; overflow:hidden;
+    border:1px solid var(--border-subtle);
+    touch-action:none; user-select:none; -webkit-user-select:none;
+    will-change:transform;
+    box-shadow:0 12px 34px rgba(0,0,0,0.45);
+  }
+  .swipe-card.behind{ pointer-events:none; }
+  .swipe-card .card-media{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:110px; font-weight:800; color:rgba(255,255,255,0.92);
+    text-shadow:0 8px 34px rgba(0,0,0,0.35);
+  }
+  .swipe-card .card-shade{
+    position:absolute; left:0; right:0; bottom:0; height:60%;
+    background:linear-gradient(180deg, transparent, rgba(5,3,8,0.55) 45%, rgba(5,3,8,0.92));
+  }
+  .swipe-card .card-info{ position:absolute; left:0; right:0; bottom:0; padding:18px 16px 16px; color:#fff; }
+  .swipe-card .card-name{ font-size:22px; font-weight:800; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .swipe-card .card-tags{ display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 10px; }
+  .swipe-card .card-tags .tag{ background:rgba(255,255,255,0.12); border-color:rgba(255,255,255,0.25); color:#fff; }
+  .swipe-card .card-meta{
+    display:flex; align-items:center; flex-wrap:wrap; gap:12px;
+    font-size:12.5px; font-weight:600; color:rgba(255,255,255,0.9);
+  }
+  .card-avail{ display:inline-flex; align-items:center; gap:6px; }
+  .card-avail .dot{ width:8px; height:8px; border-radius:50%; box-shadow:0 0 8px currentColor; }
+  .card-sponsored{ position:absolute; top:14px; left:14px; z-index:2; }
+  .match-pill{
+    position:absolute; top:14px; right:14px; z-index:2;
+    padding:4px 10px; border-radius:999px; font-size:11px; font-weight:800;
+    background:rgba(11,7,16,0.65); color:var(--neon-cyan); border:1px solid var(--neon-cyan);
+    box-shadow:0 0 12px rgba(46,242,255,0.4);
+  }
+  /* Richtungs-Labels während des Swipens (Tinder-Vorbild) */
+  .swipe-hint{
+    position:absolute; top:24px; z-index:3; padding:7px 14px;
+    border:3px solid; border-radius:10px;
+    font-size:21px; font-weight:800; letter-spacing:1.5px;
+    opacity:0; pointer-events:none; text-transform:uppercase;
+    background:rgba(11,7,16,0.35);
+  }
+  .swipe-hint.hint-follow{ left:16px; transform:rotate(-12deg); color:var(--neon-cyan); border-color:var(--neon-cyan); }
+  .swipe-hint.hint-book{ right:16px; transform:rotate(12deg); color:var(--neon-magenta); border-color:var(--neon-magenta); }
+  .swipe-hint.hint-next{ top:auto; bottom:90px; left:50%; transform:translateX(-50%) rotate(-4deg); color:#fff; border-color:#fff; }
+  .swipe-hint.hint-back{ top:70px; left:50%; transform:translateX(-50%) rotate(4deg); color:var(--warning); border-color:var(--warning); }
+  /* Herz-Feedback beim Folgen-Swipe */
+  .heart-burst{
+    position:absolute; top:50%; left:50%; z-index:4; font-size:84px;
+    transform:translate(-50%,-50%) scale(0);
+    animation:heartBurst .7s ease forwards; pointer-events:none;
+  }
+  @keyframes heartBurst{
+    0%{ transform:translate(-50%,-50%) scale(0); opacity:0; }
+    45%{ transform:translate(-50%,-50%) scale(1.25); opacity:1; }
+    100%{ transform:translate(-50%,-50%) scale(1); opacity:0; }
+  }
+  /* Vorherige Karte "fällt" beim Zurück-Swipe von oben ein */
+  .swipe-card.enter-back{ animation:dropIn .3s ease; }
+  @keyframes dropIn{ from{ transform:translateY(-40px) scale(0.96); opacity:0; } to{ transform:translateY(0) scale(1); opacity:1; } }
+  /* End-Screen des Stacks */
+  .stack-empty{
+    position:absolute; inset:0; border-radius:24px;
+    border:1px dashed var(--border-subtle); background:var(--bg-card);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:10px; text-align:center; padding:26px;
+  }
+  .stack-empty h3{ margin:0; font-size:17px; }
 </style>
 </head>
 <body>
@@ -730,11 +811,14 @@
   <!-- ===================== Hauptbereich mit Tabs & Overlays ===================== -->
   <main class="app-main" id="app-main">
 
-    <!-- TAB 1a: Nutzer – DJ-Suche & Buchung -->
+    <!-- TAB 1a: Nutzer – DJ-Discovery (Card-Stack) & Buchung -->
     <section class="tab-content" id="tab-1-user">
       <div class="search-bar">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" id="search-input" placeholder="DJ oder Genre suchen…" oninput="renderDjList()">
+        <button class="icon-btn" id="view-toggle-btn" onclick="toggleDiscoveryMode()" title="Ansicht wechseln (Karten/Liste)">
+          <svg id="view-toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+        </button>
         <button class="icon-btn" id="filter-toggle-btn" onclick="toggleFilterPanel()">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
         </button>
@@ -769,8 +853,12 @@
         </div>
       </div>
 
-      <div class="section-title">DJs in deiner Nähe</div>
-      <div class="dj-list" id="dj-list"></div>
+      <div class="section-title" style="display:flex; align-items:center; justify-content:space-between;">
+        <span>DJs in deiner Nähe</span>
+        <span class="stack-counter" id="stack-counter"></span>
+      </div>
+      <div class="dj-stack-wrap" id="dj-stack-wrap"></div>
+      <div class="dj-list" id="dj-list" style="display:none;"></div>
     </section>
 
     <!-- TAB 1b: DJ – Buchungsanfragen -->
@@ -1234,6 +1322,10 @@ const ICONS = {
   play: '<polygon points="5 3 19 12 5 21 5 3"/>',
   users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
   home: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  layers: '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
+  listIcon: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
+  calendar: '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+  music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
 };
 
@@ -1442,8 +1534,11 @@ const state = {
   userAvatar: { color: "linear-gradient(135deg,#2ef2ff,#33e6a0)", emoji: "🙂" },
   newStoryBackground: null,
   newStoryEmoji: null,
-  storyViewer: { djId: null, stories: [], index: 0 },
+  storyViewer: { entityKey: null, stories: [], index: 0 },
   storyTimer: null,
+  // Feature A: Tinder-Discovery. mode: "stack" (Karten) oder "list" (klassische Liste).
+  // orderKey erkennt Filteränderungen, damit der Stack nur dann von vorn beginnt.
+  discovery: { mode: "stack", order: [], index: 0, orderKey: null },
 };
 
 function getDj(id){ return djs.find(d => d.id === id); }
@@ -1649,13 +1744,15 @@ function toggleFilterPanel(){
   document.getElementById("filter-toggle-btn").classList.toggle("active");
 }
 
-function renderDjList(){
+// Wendet alle aktiven Filter (Suche, Genre, Stadt, Preis, Verfügbarkeit) auf die DJ-Liste an.
+// Wird von Listenansicht, Card-Stack und Geschmacks-Matching gemeinsam genutzt.
+function getFilteredDjs(){
   const query = document.getElementById("search-input").value.trim().toLowerCase();
   const priceFilter = document.getElementById("filter-price").value;
   const cityFilter = document.getElementById("filter-city").value;
   const onlyAvailable = document.getElementById("filter-available").checked;
 
-  let list = djs.filter(dj => {
+  return djs.filter(dj => {
     const matchesQuery = !query || dj.name.toLowerCase().includes(query) || dj.genre.toLowerCase().includes(query);
     const matchesGenre = state.selectedGenres.size === 0 || dj.genres.some(g => state.selectedGenres.has(g));
     const matchesCity = cityFilter === "all" || dj.city === cityFilter;
@@ -1667,12 +1764,40 @@ function renderDjList(){
     }
     return matchesQuery && matchesGenre && matchesCity && matchesAvailability && matchesPrice;
   });
+}
+
+// Dispatcher: Der bestehende Funktionsname bleibt erhalten, damit alle bisherigen
+// Aufrufer (Filter, Pro-Abo, Avatar-Refresh, Reviews) weiter funktionieren.
+function renderDjList(){
+  const tab = document.getElementById("tab-1-user");
+  const stackWrap = document.getElementById("dj-stack-wrap");
+  const listEl = document.getElementById("dj-list");
+  const isStack = state.discovery.mode === "stack";
+
+  tab.classList.toggle("stack-mode", isStack);
+  stackWrap.style.display = isStack ? "" : "none";
+  listEl.style.display = isStack ? "none" : "";
+  document.getElementById("view-toggle-icon").innerHTML = isStack ? ICONS.listIcon : ICONS.layers;
+
+  if(isStack) renderDjStack();
+  else renderDjListClassic();
+}
+
+function toggleDiscoveryMode(){
+  state.discovery.mode = state.discovery.mode === "stack" ? "list" : "stack";
+  renderDjList();
+}
+
+// Klassische Listenansicht (bisheriges Verhalten, als umschaltbare Alternative erhalten)
+function renderDjListClassic(){
+  let list = getFilteredDjs();
 
   // Pro-DJs werden in der Suchliste nach oben priorisiert (echter Vorteil des Pro-Abos)
   list = [...list].sort((a, b) => (b.isPro ? 1 : 0) - (a.isPro ? 1 : 0));
 
   const container = document.getElementById("dj-list");
   container.innerHTML = "";
+  document.getElementById("stack-counter").textContent = "";
 
   if(list.length === 0){
     container.innerHTML = `<div class="empty-state">
@@ -1691,6 +1816,226 @@ function renderDjList(){
       container.appendChild(buildDjCard(sponsoredDj, true));
     }
   });
+}
+
+/* =======================================================================
+   FEATURE A+B: TINDER-STYLE CARD-STACK
+   Gesten: links = Buchen, rechts = Folgen, unten = nächster DJ, oben = zurück.
+   Feature B: Pro-/Gesponserte DJs erscheinen immer zuerst im Stapel.
+   ======================================================================= */
+function isPromotedDj(dj){ return dj.isPro === true || dj.sponsored === true; }
+
+// Gesponserte/Pro-DJs zuerst, danach die übrigen in bisheriger Reihenfolge (stabile Sortierung)
+function buildDiscoveryOrder(list){
+  return [...list].sort((a, b) => (isPromotedDj(b) ? 1 : 0) - (isPromotedDj(a) ? 1 : 0));
+}
+
+function renderDjStack(){
+  const wrap = document.getElementById("dj-stack-wrap");
+  const ordered = buildDiscoveryOrder(getFilteredDjs());
+  const key = ordered.map(d => d.id).join(",");
+
+  // Nur bei geänderter Filter-/Sortiergrundlage von vorn beginnen, sonst Position behalten
+  if(key !== state.discovery.orderKey){
+    state.discovery.orderKey = key;
+    state.discovery.order = ordered.map(d => d.id);
+    state.discovery.index = 0;
+  }
+
+  const d = state.discovery;
+  wrap.innerHTML = "";
+
+  if(d.order.length === 0 || d.index >= d.order.length){
+    renderStackEmpty(wrap, d.order.length === 0);
+    document.getElementById("stack-counter").textContent = d.order.length ? `${d.order.length}/${d.order.length}` : "";
+    return;
+  }
+
+  document.getElementById("stack-counter").textContent = `${d.index + 1}/${d.order.length}`;
+
+  // Oberste Karte + bis zu 2 Karten dahinter (Tiefenstaffelung); DOM-Reihenfolge: hinten zuerst
+  for(let depth = Math.min(2, d.order.length - 1 - d.index); depth >= 0; depth--){
+    const dj = getDj(d.order[d.index + depth]);
+    wrap.appendChild(buildSwipeCard(dj, depth));
+  }
+}
+
+// End-Screen: alle Karten durchgesehen bzw. keine Treffer für die Filter
+function renderStackEmpty(wrap, noResults){
+  wrap.innerHTML = `<div class="stack-empty">
+    <div style="font-size:46px;">${noResults ? "🔍" : "🎧"}</div>
+    <h3>${noResults ? "Keine DJs für diese Filter" : "Alle DJs durchgesehen!"}</h3>
+    <p class="subtle-text" style="margin:0 0 8px;">${noResults
+      ? "Passe deine Filter an, um mehr DJs zu entdecken."
+      : "Du hast alle DJs in deiner Nähe gesehen. Starte von vorn oder ändere deine Filter."}</p>
+    ${noResults ? "" : '<button class="btn btn-primary" onclick="restartDjStack()">↺ Von vorn starten</button>'}
+    <button class="btn btn-outline" onclick="openFilterPanelFromStack()">Filter anpassen</button>
+  </div>`;
+}
+
+function restartDjStack(){
+  state.discovery.index = 0;
+  renderDjStack();
+}
+
+function openFilterPanelFromStack(){
+  const panel = document.getElementById("filter-panel");
+  if(!panel.classList.contains("open")) toggleFilterPanel();
+}
+
+function buildSwipeCard(dj, depth){
+  const card = document.createElement("div");
+  card.className = "swipe-card" + (depth > 0 ? " behind" : "");
+  card.style.background = dj.color;
+  card.style.zIndex = 30 - depth;
+  if(depth > 0) card.style.transform = `translateY(${depth * 14}px) scale(${1 - depth * 0.045})`;
+
+  // Match-Pill nur, wenn ein Geschmacksprofil importiert wurde (Feature F)
+  const matchPct = state.tasteProfile ? computeDjMatchPercent(dj) : null;
+
+  card.innerHTML = `
+    <div class="card-media">${avatarContent(dj)}</div>
+    <div class="card-shade"></div>
+    ${isPromotedDj(dj) ? '<span class="badge-sponsored card-sponsored">Gesponsert</span>' : ""}
+    ${matchPct !== null ? `<span class="match-pill">${matchPct}% Match</span>` : ""}
+    <div class="swipe-hint hint-follow">Folgen</div>
+    <div class="swipe-hint hint-book">Buchen</div>
+    <div class="swipe-hint hint-next">Weiter</div>
+    <div class="swipe-hint hint-back">Zurück</div>
+    <div class="card-info">
+      <div class="card-name">${dj.name}
+        ${dj.isPro ? '<span class="badge-pro">PRO</span>' : ""}
+        ${state.followed.has(dj.id) ? '<span class="badge-available" style="background:rgba(46,242,255,0.15); color:var(--neon-cyan); border-color:rgba(46,242,255,0.4);">✓ Gefolgt</span>' : ""}
+      </div>
+      <div class="card-tags">${dj.genres.map(g => `<span class="tag">${g}</span>`).join("")}</div>
+      <div class="card-meta">
+        <span class="rating">★ ${dj.rating}</span>
+        <span class="price-tag">${dj.price} €/Std.</span>
+        <span>📍 ${dj.city}</span>
+        <span class="card-avail" style="color:${dj.available ? "var(--success)" : "var(--danger)"};">
+          <span class="dot" style="background:currentColor;"></span>${dj.available ? "Verfügbar" : "Ausgebucht"}
+        </span>
+      </div>
+    </div>`;
+
+  if(depth === 0) attachSwipeHandlers(card, dj);
+  return card;
+}
+
+// Drag-Logik über Pointer Events: deckt Touch UND Maus ab.
+// Nur transform/opacity werden animiert (keine Layout-Änderungen → flüssig).
+function attachSwipeHandlers(card, dj){
+  const THRESHOLD = 90; // Mindest-Distanz in px, ab der ein Swipe als Aktion zählt
+  let startX = 0, startY = 0, dx = 0, dy = 0, dragging = false, moved = false;
+
+  card.addEventListener("pointerdown", e => {
+    dragging = true; moved = false;
+    startX = e.clientX; startY = e.clientY; dx = 0; dy = 0;
+    card.setPointerCapture(e.pointerId);
+    card.style.transition = "none";
+  });
+
+  card.addEventListener("pointermove", e => {
+    if(!dragging) return;
+    dx = e.clientX - startX;
+    dy = e.clientY - startY;
+    if(Math.abs(dx) + Math.abs(dy) > 8) moved = true;
+    card.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx * 0.06}deg)`;
+    updateSwipeHints(card, dx, dy);
+  });
+
+  const finish = () => {
+    if(!dragging) return;
+    dragging = false;
+
+    // Kaum Bewegung → als Tap werten und das DJ-Detailprofil öffnen
+    if(!moved){
+      resetSwipeCard(card);
+      openDjDetail(dj.id);
+      return;
+    }
+
+    const horizontal = Math.abs(dx) >= Math.abs(dy);
+    if(horizontal && dx <= -THRESHOLD)      swipeAction(card, dj, "book");
+    else if(horizontal && dx >= THRESHOLD)  swipeAction(card, dj, "follow");
+    else if(!horizontal && dy >= THRESHOLD) swipeAction(card, dj, "next");
+    else if(!horizontal && dy <= -THRESHOLD) swipeAction(card, dj, "back");
+    else resetSwipeCard(card); // Swipe abgebrochen → Snap-back
+  };
+
+  card.addEventListener("pointerup", finish);
+  card.addEventListener("pointercancel", () => { if(dragging){ dragging = false; resetSwipeCard(card); } });
+}
+
+// Blendet das passende Richtungs-Label proportional zur Zieh-Distanz ein
+function updateSwipeHints(card, dx, dy){
+  const horizontal = Math.abs(dx) >= Math.abs(dy);
+  const strength = v => Math.min(1, Math.max(0, (Math.abs(v) - 20) / 70));
+  card.querySelector(".hint-book").style.opacity   = horizontal && dx < 0 ? strength(dx) : 0;
+  card.querySelector(".hint-follow").style.opacity = horizontal && dx > 0 ? strength(dx) : 0;
+  card.querySelector(".hint-next").style.opacity   = !horizontal && dy > 0 ? strength(dy) : 0;
+  card.querySelector(".hint-back").style.opacity   = !horizontal && dy < 0 ? strength(dy) : 0;
+}
+
+function resetSwipeCard(card){
+  card.style.transition = "transform .32s cubic-bezier(.2,.8,.3,1.15)";
+  card.style.transform = "";
+  card.querySelectorAll(".swipe-hint").forEach(h => h.style.opacity = 0);
+}
+
+// Karte animiert aus dem Bild fliegen lassen, danach Callback (z.B. Stack neu rendern)
+function flyOutCard(card, x, y, rot, cb){
+  card.style.transition = "transform .34s ease, opacity .34s ease";
+  card.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg)`;
+  card.style.opacity = "0";
+  setTimeout(cb, 300);
+}
+
+function swipeAction(card, dj, action){
+  const d = state.discovery;
+
+  if(action === "book"){
+    // Buchungsflow öffnen; die Karte bleibt im Stapel (Snap-back im Hintergrund),
+    // damit der DJ nach Abbruch der Buchung nicht "verloren" ist
+    flyOutCard(card, -480, -30, -16, () => renderDjStack());
+    startBooking(dj.id);
+    return;
+  }
+
+  if(action === "follow"){
+    const already = state.followed.has(dj.id);
+    if(!already){
+      state.followed.add(dj.id);
+      const heart = document.createElement("div");
+      heart.className = "heart-burst";
+      heart.textContent = "💜";
+      card.appendChild(heart);
+      renderFollowScroll();
+      renderFeed();
+      showToast(`Du folgst jetzt ${dj.name} 💜`);
+    } else {
+      showToast(`Du folgst ${dj.name} bereits ✓`);
+    }
+    setTimeout(() => flyOutCard(card, 480, -30, 16, () => { d.index++; renderDjStack(); }), already ? 0 : 260);
+    return;
+  }
+
+  if(action === "next"){
+    flyOutCard(card, 0, 620, 4, () => { d.index++; renderDjStack(); });
+    return;
+  }
+
+  if(action === "back"){
+    if(d.index > 0){
+      d.index--;
+      renderDjStack();
+      const top = document.querySelector("#dj-stack-wrap .swipe-card:not(.behind)");
+      if(top) top.classList.add("enter-back");
+    } else {
+      resetSwipeCard(card);
+      showToast("Du bist am Anfang des Stapels");
+    }
+  }
 }
 
 // Erzeugt eine DJ-Karte; isAd=true kennzeichnet sie zusätzlich als "Gesponsert"
@@ -2309,8 +2654,12 @@ function renderProOverlay(){
       <h3>BeatSpot Pro</h3>
       <p class="subtle-text" style="margin:0;">Hol dir mehr Sichtbarkeit & Buchungen.</p>
     </div>
+    <div class="info-block" style="border-color:rgba(255,46,230,0.45); background:linear-gradient(135deg, rgba(255,46,230,0.08), var(--bg-card));">
+      <p style="margin:0; font-size:13.5px; line-height:1.5;">🥇 <b>Erscheine als Erstes bei allen Nutzern in deiner Nähe:</b> Pro-DJs stehen im Discovery-Stapel immer ganz oben – jeder Nutzer sieht deine Karte zuerst.</p>
+    </div>
     <div class="info-block">
       <div class="pro-compare-row head"><span></span><span>Free</span><span>Pro</span></div>
+      <div class="pro-compare-row"><span>Ganz oben im Discovery-Stapel</span><span>✕</span><span>✓</span></div>
       <div class="pro-compare-row"><span>Werbefreie Nutzung</span><span>✕</span><span>✓</span></div>
       <div class="pro-compare-row"><span>Top-Platzierung in der Suche</span><span>✕</span><span>✓</span></div>
       <div class="pro-compare-row"><span>Erweiterte Statistiken</span><span>✕</span><span>✓</span></div>
