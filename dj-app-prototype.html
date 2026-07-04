@@ -1020,6 +1020,13 @@
   .login-tagline{ color:var(--text-secondary); font-size:14.5px; line-height:1.55; margin:0 0 34px; }
   .login-btn{ font-size:16px; padding:16px; box-shadow:0 8px 30px rgba(207,15,180,0.35); }
   .login-hint{ color:var(--text-muted); font-size:11.5px; margin-top:16px; }
+
+  /* ===================== v2: SVG-Illustrationen (Avatare & Cards) ===================== */
+  .avatar{ overflow:hidden; }
+  .avatar > svg{ width:100%; height:100%; display:block; }
+  .card-media > svg{ position:absolute; inset:0; width:100%; height:100%; }
+  .avatar-gallery .avatar-option.illustrated{ overflow:hidden; padding:0; }
+  .avatar-gallery .avatar-option.illustrated svg{ width:100%; height:100%; display:block; }
 </style>
 </head>
 <body>
@@ -1703,7 +1710,7 @@ const ICONS = {
 const djs = [
   { id: 1, name: "DJ Nova", genre: "Techno", genres: ["Techno", "House"], price: 120, rating: 4.8, city: "Berlin",
     color: "linear-gradient(135deg,#ff2ee6,#8a3ffc)", available: true, isPro: false, sponsored: false,
-    blockedDates: ["2026-07-10", "2026-07-11", "2026-07-25"], avatarEmoji: null,
+    blockedDates: ["2026-07-10", "2026-07-11", "2026-07-25"], avatarEmoji: null, illustration: 1,
     bio: "DJ Nova bringt seit über 8 Jahren Clubs in Berlin und ganz Europa zum Beben. Bekannt für treibende Techno-Sets mit hypnotischen Synth-Layern.",
     followers: 12400,
     mixes: [{title:"Warehouse Session Vol. 4", duration:"58 Min"}, {title:"Midnight Drive", duration:"42 Min"}],
@@ -1715,7 +1722,7 @@ const djs = [
     ] },
   { id: 2, name: "Luna Beats", genre: "House", genres: ["House", "Deep House"], price: 95, rating: 4.6, city: "Hamburg",
     color: "linear-gradient(135deg,#2ef2ff,#8a3ffc)", available: true, isPro: false, sponsored: false,
-    blockedDates: ["2026-07-15"], avatarEmoji: null,
+    blockedDates: ["2026-07-15"], avatarEmoji: null, illustration: 2,
     bio: "Luna Beats steht für warme House-Grooves und sonnige Rooftop-Vibes. Ihre Sets sind der perfekte Soundtrack für laue Sommernächte.",
     followers: 8700,
     mixes: [{title:"Rooftop Sunset Mix", duration:"63 Min"}],
@@ -1726,7 +1733,7 @@ const djs = [
     ] },
   { id: 3, name: "MC Solstice", genre: "Hip-Hop", genres: ["Hip-Hop", "Rap"], price: 110, rating: 4.9, city: "München",
     color: "linear-gradient(135deg,#ffb020,#ff2ee6)", available: false, isPro: false, sponsored: false,
-    blockedDates: [], avatarEmoji: null,
+    blockedDates: [], avatarEmoji: null, illustration: 3,
     bio: "MC Solstice verbindet Old-School-Hip-Hop mit aktuellen Rap-Hits und bringt garantiert jede Crowd zum Mitsingen.",
     followers: 15600,
     mixes: [{title:"Backstage Anthems", duration:"50 Min"}, {title:"Old School Classics", duration:"71 Min"}],
@@ -1738,7 +1745,7 @@ const djs = [
     ] },
   { id: 4, name: "Electra Vibe", genre: "EDM", genres: ["EDM", "Electro"], price: 140, rating: 4.7, city: "Köln",
     color: "linear-gradient(135deg,#8a3ffc,#2ef2ff)", available: true, isPro: false, sponsored: true,
-    blockedDates: [], avatarEmoji: null,
+    blockedDates: [], avatarEmoji: null, illustration: 4,
     bio: "Electra Vibe liefert bombastische EDM-Drops und energiegeladene Bühnenshows für Festivals und große Clubnächte.",
     followers: 21300,
     mixes: [{title:"Festival Anthem Set", duration:"55 Min"}],
@@ -1749,7 +1756,7 @@ const djs = [
     ] },
   { id: 5, name: "DJ Kalypso", genre: "Latin", genres: ["Latin", "Reggaeton"], price: 90, rating: 4.5, city: "Frankfurt",
     color: "linear-gradient(135deg,#33e6a0,#2ef2ff)", available: true, isPro: false, sponsored: true,
-    blockedDates: [], avatarEmoji: null,
+    blockedDates: [], avatarEmoji: null, illustration: 5,
     bio: "DJ Kalypso bringt karibisches Flair nach Deutschland – Reggaeton, Latin-Pop und Salsa für die perfekte Tanzfläche.",
     followers: 6300,
     mixes: [{title:"Fiesta Latina Mix", duration:"47 Min"}],
@@ -1760,7 +1767,7 @@ const djs = [
     ] },
   { id: 6, name: "Nightshade", genre: "Dark Techno", genres: ["Techno", "Industrial"], price: 130, rating: 4.9, city: "Berlin",
     color: "linear-gradient(135deg,#6f6484,#ff2ee6)", available: false, isPro: false, sponsored: false,
-    blockedDates: [], avatarEmoji: null,
+    blockedDates: [], avatarEmoji: null, illustration: 6,
     bio: "Nightshade steht für rohe, düstere Techno-Sounds und intensive Warehouse-Atmosphäre. Nichts für schwache Nerven.",
     followers: 18900,
     mixes: [{title:"Industrial Nights", duration:"66 Min"}, {title:"Bunker Tapes", duration:"39 Min"}],
@@ -1796,6 +1803,184 @@ const AVATAR_PRESETS = [
   { color: "linear-gradient(135deg,#2ef2ff,#ff2ee6)", emoji: "🦄" },
   { color: "linear-gradient(135deg,#33e6a0,#ffb020)", emoji: "🎉" },
 ];
+
+// =======================================================================
+// v2: SVG-PROFIL-ILLUSTRATIONEN
+// Sechs individuelle, komplett inline eingebettete Szenen (offline-fähig).
+// viewBox + preserveAspectRatio="slice" = Cover-Verhalten in runden Avataren
+// und auf den Discovery-Cards. Hinweis: Da dieselbe Illustration mehrfach im
+// Dokument vorkommen kann, sind die Gradient-IDs pro Illustration eindeutig
+// benannt; identische Duplikate lösen Browser auf die erste Definition auf.
+// =======================================================================
+const DJ_ILLUSTRATIONS = {
+  // 1 · "Pulse Deck" – Techno-DJ am Mischpult mit Lasern (magenta/violett)
+  1: `<svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice" role="img" aria-label="DJ am Mischpult mit Lasershow">
+    <defs>
+      <linearGradient id="il1-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#33104f"/><stop offset="1" stop-color="#120421"/></linearGradient>
+      <linearGradient id="il1-neon" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ff2ee6"/><stop offset="1" stop-color="#8a3ffc"/></linearGradient>
+      <radialGradient id="il1-glow" cx="0.5" cy="0.42" r="0.55"><stop offset="0" stop-color="#ff2ee6" stop-opacity="0.5"/><stop offset="1" stop-color="#ff2ee6" stop-opacity="0"/></radialGradient>
+    </defs>
+    <rect width="200" height="200" fill="url(#il1-bg)"/>
+    <path d="M0 0 L92 122 L97 122 Z" fill="#ff2ee6" opacity="0.32"/>
+    <path d="M200 0 L103 122 L108 122 Z" fill="#8a3ffc" opacity="0.32"/>
+    <path d="M36 0 L96 120 L99 120 Z" fill="#2ef2ff" opacity="0.22"/>
+    <path d="M164 0 L101 120 L104 120 Z" fill="#2ef2ff" opacity="0.22"/>
+    <circle cx="100" cy="88" r="62" fill="url(#il1-glow)"/>
+    <path d="M60 150 q7 -36 40 -36 q33 0 40 36 z" fill="#0e0318"/>
+    <circle cx="100" cy="95" r="16" fill="#0e0318"/>
+    <path d="M83 93 a17 17 0 0 1 34 0" stroke="#ff2ee6" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <circle cx="84" cy="96" r="4.5" fill="#ff2ee6"/><circle cx="116" cy="96" r="4.5" fill="#ff2ee6"/>
+    <rect x="36" y="142" width="128" height="28" rx="6" fill="#1b0a2e" stroke="url(#il1-neon)" stroke-width="1.6"/>
+    <circle cx="66" cy="156" r="9.5" fill="#2a1244" stroke="#ff2ee6" stroke-width="2"/><circle cx="66" cy="156" r="2.4" fill="#ff2ee6"/>
+    <circle cx="134" cy="156" r="9.5" fill="#2a1244" stroke="#2ef2ff" stroke-width="2"/><circle cx="134" cy="156" r="2.4" fill="#2ef2ff"/>
+    <rect x="87" y="148" width="26" height="16" rx="2.5" fill="#2a1244"/>
+    <rect x="91" y="152" width="3.4" height="9" rx="1" fill="#ff2ee6"/><rect x="98" y="150" width="3.4" height="11" rx="1" fill="#2ef2ff"/><rect x="105" y="153" width="3.4" height="8" rx="1" fill="#8a3ffc"/>
+    <g fill="url(#il1-neon)" opacity="0.85">
+      <rect x="22" y="182" width="6" height="11" rx="2"/><rect x="34" y="176" width="6" height="17" rx="2"/><rect x="46" y="184" width="6" height="9" rx="2"/><rect x="58" y="179" width="6" height="14" rx="2"/><rect x="70" y="185" width="6" height="8" rx="2"/><rect x="82" y="177" width="6" height="16" rx="2"/><rect x="94" y="183" width="6" height="10" rx="2"/><rect x="106" y="178" width="6" height="15" rx="2"/><rect x="118" y="184" width="6" height="9" rx="2"/><rect x="130" y="176" width="6" height="17" rx="2"/><rect x="142" y="182" width="6" height="11" rx="2"/><rect x="154" y="179" width="6" height="14" rx="2"/><rect x="166" y="184" width="6" height="9" rx="2"/>
+    </g>
+  </svg>`,
+
+  // 2 · "Golden Hour" – Rooftop-Sunset mit DJ-Booth (cyan/violett/orange)
+  2: `<svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Rooftop-Party bei Sonnenuntergang">
+    <defs>
+      <linearGradient id="il2-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3c1a78"/><stop offset="0.55" stop-color="#8a3ffc"/><stop offset="1" stop-color="#ff8d5c"/></linearGradient>
+      <radialGradient id="il2-sun" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ffd98a"/><stop offset="0.7" stop-color="#ff9d5c"/><stop offset="1" stop-color="#ff9d5c" stop-opacity="0"/></radialGradient>
+    </defs>
+    <rect width="200" height="200" fill="url(#il2-sky)"/>
+    <circle cx="100" cy="112" r="46" fill="url(#il2-sun)"/>
+    <circle cx="100" cy="112" r="26" fill="#ffcf7d"/>
+    <g fill="#2a1052">
+      <rect x="6" y="96" width="18" height="52"/><rect x="28" y="82" width="14" height="66"/><rect x="150" y="88" width="16" height="60"/><rect x="170" y="100" width="20" height="48"/>
+      <rect x="46" y="104" width="12" height="44"/><rect x="140" y="106" width="8" height="42"/>
+    </g>
+    <g fill="#ffd98a" opacity="0.8">
+      <rect x="10" y="102" width="3" height="3"/><rect x="17" y="112" width="3" height="3"/><rect x="31" y="90" width="3" height="3"/><rect x="36" y="104" width="3" height="3"/><rect x="154" y="96" width="3" height="3"/><rect x="175" y="108" width="3" height="3"/><rect x="182" y="120" width="3" height="3"/>
+    </g>
+    <path d="M0 148 h200 v52 h-200 z" fill="#1d0b3f"/>
+    <path d="M12 148 q44 18 88 0 q44 -18 88 0" stroke="#2ef2ff" stroke-width="1.6" fill="none" opacity="0.9"/>
+    <g fill="#ffe9b0">
+      <circle cx="34" cy="155" r="2.2"/><circle cx="64" cy="159" r="2.2"/><circle cx="100" cy="157" r="2.2"/><circle cx="136" cy="152" r="2.2"/><circle cx="168" cy="151" r="2.2"/>
+    </g>
+    <rect x="66" y="160" width="68" height="22" rx="4" fill="#140631" stroke="#2ef2ff" stroke-width="1.4"/>
+    <circle cx="84" cy="171" r="6.5" fill="#241052" stroke="#2ef2ff" stroke-width="1.6"/>
+    <circle cx="116" cy="171" r="6.5" fill="#241052" stroke="#ff2ee6" stroke-width="1.6"/>
+    <circle cx="100" cy="134" r="11" fill="#140631"/>
+    <path d="M78 160 q4 -16 22 -16 q18 0 22 16 z" fill="#140631"/>
+    <path d="M89 132 a11 11 0 0 1 22 0" stroke="#2ef2ff" stroke-width="3" fill="none" stroke-linecap="round"/>
+  </svg>`,
+
+  // 3 · "Mic Check" – Hip-Hop-MC mit Crowd (amber/magenta)
+  3: `<svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice" role="img" aria-label="MC auf der Bühne mit Publikum">
+    <defs>
+      <linearGradient id="il3-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3d1608"/><stop offset="1" stop-color="#1b0510"/></linearGradient>
+      <linearGradient id="il3-spot" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb020" stop-opacity="0.65"/><stop offset="1" stop-color="#ffb020" stop-opacity="0"/></linearGradient>
+    </defs>
+    <rect width="200" height="200" fill="url(#il3-bg)"/>
+    <path d="M84 0 L52 138 L148 138 L116 0 Z" fill="url(#il3-spot)"/>
+    <g fill="#ffb020" opacity="0.75">
+      <circle cx="30" cy="36" r="2"/><circle cx="58" cy="18" r="1.6"/><circle cx="160" cy="30" r="2"/><circle cx="176" cy="60" r="1.6"/><circle cx="22" cy="76" r="1.6"/><circle cx="184" cy="96" r="2"/>
+    </g>
+    <circle cx="100" cy="74" r="15" fill="#160408"/>
+    <path d="M100 89 q-17 2 -21 26 l8 4 l4 -14 l4 34 h10 l4 -34 l4 14 l8 -4 q-4 -24 -21 -26 z" fill="#160408"/>
+    <path d="M113 82 l14 -10" stroke="#160408" stroke-width="7" stroke-linecap="round"/>
+    <rect x="123" y="64" width="9" height="13" rx="4.5" fill="#ff2ee6"/>
+    <path d="M84 64 q-8 8 -2 18" stroke="#ffb020" stroke-width="2.4" fill="none" opacity="0.9"/>
+    <path d="M78 58 q-13 12 -4 28" stroke="#ffb020" stroke-width="2" fill="none" opacity="0.55"/>
+    <path d="M0 200 v-44 q10 -8 16 2 q7 -14 15 -1 q6 -10 13 1 q8 -14 15 0 q7 -9 13 1 q8 -13 15 0 q7 -10 13 1 q8 -13 15 0 q6 -9 13 1 q8 -13 15 0 q7 -10 13 1 q8 -12 15 0 q6 -8 13 2 q7 -12 16 -2 v38 z" fill="#0d0206"/>
+    <g stroke="#0d0206" stroke-width="5" stroke-linecap="round">
+      <path d="M24 156 l-6 -18"/><path d="M56 158 l4 -20"/><path d="M92 160 l-5 -19"/><path d="M124 158 l6 -18"/><path d="M160 156 l-4 -19"/><path d="M182 158 l5 -16"/>
+    </g>
+    <rect x="0" y="192" width="200" height="8" fill="#ff2ee6" opacity="0.25"/>
+  </svg>`,
+
+  // 4 · "Mainstage" – EDM-Festivalbühne mit Lichtkegeln (violett/cyan)
+  4: `<svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Festival-Mainstage mit Lichtshow">
+    <defs>
+      <linearGradient id="il4-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b0b46"/><stop offset="1" stop-color="#0a0322"/></linearGradient>
+      <linearGradient id="il4-led" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8a3ffc"/><stop offset="0.5" stop-color="#2ef2ff"/><stop offset="1" stop-color="#ff2ee6"/></linearGradient>
+    </defs>
+    <rect width="200" height="200" fill="url(#il4-bg)"/>
+    <path d="M40 46 L6 160 L74 160 Z" fill="#2ef2ff" opacity="0.28"/>
+    <path d="M160 46 L126 160 L194 160 Z" fill="#8a3ffc" opacity="0.3"/>
+    <path d="M40 46 L118 160 L146 160 Z" fill="#ff2ee6" opacity="0.2"/>
+    <path d="M160 46 L54 160 L82 160 Z" fill="#ff2ee6" opacity="0.2"/>
+    <g stroke="#3c2b6b" stroke-width="4"><line x1="40" y1="30" x2="40" y2="120"/><line x1="160" y1="30" x2="160" y2="120"/><line x1="34" y1="34" x2="166" y2="34"/></g>
+    <g stroke="#3c2b6b" stroke-width="2"><line x1="34" y1="34" x2="46" y2="46"/><line x1="58" y1="34" x2="70" y2="46"/><line x1="82" y1="34" x2="94" y2="46"/><line x1="106" y1="34" x2="118" y2="46"/><line x1="130" y1="34" x2="142" y2="46"/><line x1="154" y1="34" x2="166" y2="46"/></g>
+    <circle cx="40" cy="46" r="5" fill="#2ef2ff"/><circle cx="160" cy="46" r="5" fill="#8a3ffc"/>
+    <rect x="62" y="70" width="76" height="44" rx="4" fill="#120739" stroke="url(#il4-led)" stroke-width="1.6"/>
+    <g fill="url(#il4-led)" opacity="0.9">
+      <rect x="68" y="78" width="8" height="28" rx="2"/><rect x="80" y="86" width="8" height="20" rx="2"/><rect x="92" y="74" width="8" height="32" rx="2"/><rect x="104" y="90" width="8" height="16" rx="2"/><rect x="116" y="80" width="8" height="26" rx="2"/><rect x="128" y="86" width="8" height="20" rx="2"/>
+    </g>
+    <g fill="#ffffff" opacity="0.75">
+      <circle cx="26" cy="86" r="1.6"/><circle cx="54" cy="60" r="1.4"/><circle cx="98" cy="52" r="1.6"/><circle cx="146" cy="62" r="1.4"/><circle cx="178" cy="88" r="1.6"/><circle cx="70" cy="126" r="1.4"/><circle cx="130" cy="124" r="1.4"/>
+    </g>
+    <path d="M0 200 v-36 q12 -10 20 0 q8 -12 17 -1 q8 -10 16 0 q9 -12 17 0 q8 -9 16 0 q9 -11 17 0 q8 -9 16 0 q9 -11 17 0 q8 -9 16 0 q9 -11 17 0 q8 -10 16 0 q7 -8 15 1 v36 z" fill="#070113"/>
+  </svg>`,
+
+  // 5 · "Fiesta del Sol" – Latin-Beachparty mit Palmen (grün/cyan/amber)
+  5: `<svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Latin-Beachparty mit Palmen">
+    <defs>
+      <linearGradient id="il5-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9d5c"/><stop offset="0.6" stop-color="#ff5c8a"/><stop offset="1" stop-color="#c2338f"/></linearGradient>
+      <linearGradient id="il5-sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2ef2ff"/><stop offset="1" stop-color="#0e8f8a"/></linearGradient>
+    </defs>
+    <rect width="200" height="200" fill="url(#il5-sky)"/>
+    <circle cx="100" cy="96" r="30" fill="#ffe08a"/>
+    <path d="M0 118 h200 v42 h-200 z" fill="url(#il5-sea)"/>
+    <g stroke="#ffffff" stroke-width="1.4" opacity="0.5"><path d="M12 130 q10 -4 20 0"/><path d="M64 140 q10 -4 20 0"/><path d="M126 128 q10 -4 20 0"/><path d="M162 144 q10 -4 20 0"/></g>
+    <path d="M0 160 h200 v40 h-200 z" fill="#f2c98a"/>
+    <path d="M30 168 q-4 -46 -14 -58 q14 4 20 18 q0 -18 -4 -28 q12 8 14 26 q6 -14 16 -18 q-8 14 -10 30 q-3 18 -6 30 z" fill="#123326"/>
+    <path d="M176 172 q4 -40 12 -50 q-12 4 -17 15 q0 -15 3 -24 q-10 7 -12 22 q-5 -12 -13 -15 q7 12 8 26 q3 15 5 26 z" fill="#123326"/>
+    <circle cx="96" cy="140" r="8" fill="#1d0a28"/>
+    <path d="M96 148 q-9 1 -12 16 l7 3 l3 -8 l-2 21 h8 l-2 -21 l3 8 l7 -3 q-3 -15 -12 -16 z" fill="#1d0a28"/>
+    <path d="M86 152 l-9 -7" stroke="#1d0a28" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M106 152 l9 -9" stroke="#1d0a28" stroke-width="4.5" stroke-linecap="round"/>
+    <circle cx="126" cy="146" r="7" fill="#1d0a28"/>
+    <path d="M126 153 q-8 1 -10 14 l6 2 l3 -7 l-2 18 h7 l-2 -18 l3 7 l6 -2 q-2 -13 -11 -14 z" fill="#1d0a28"/>
+    <path d="M117 156 l-8 5" stroke="#1d0a28" stroke-width="4" stroke-linecap="round"/>
+    <path d="M135 156 l8 -6" stroke="#1d0a28" stroke-width="4" stroke-linecap="round"/>
+    <g fill="#ffe08a"><circle cx="52" cy="60" r="2"/><circle cx="150" cy="48" r="2"/><circle cx="170" cy="80" r="1.6"/><circle cx="26" cy="88" r="1.6"/></g>
+    <g fill="#33e6a0" opacity="0.9"><rect x="10" y="188" width="5" height="8" rx="1.5"/><rect x="20" y="184" width="5" height="12" rx="1.5"/><rect x="30" y="190" width="5" height="6" rx="1.5"/><rect x="165" y="188" width="5" height="8" rx="1.5"/><rect x="175" y="184" width="5" height="12" rx="1.5"/><rect x="185" y="190" width="5" height="6" rx="1.5"/></g>
+  </svg>`,
+
+  // 6 · "Bunker" – Industrial-Warehouse mit Nebel & Laserfächer (grau/magenta)
+  6: `<svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Industrial-Warehouse-Rave mit Nebel">
+    <defs>
+      <linearGradient id="il6-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#17141f"/><stop offset="1" stop-color="#080610"/></linearGradient>
+      <radialGradient id="il6-fog" cx="0.5" cy="1" r="0.9"><stop offset="0" stop-color="#8a819a" stop-opacity="0.4"/><stop offset="1" stop-color="#8a819a" stop-opacity="0"/></radialGradient>
+    </defs>
+    <rect width="200" height="200" fill="url(#il6-bg)"/>
+    <path d="M14 200 V86 a86 60 0 0 1 172 0 V200 Z" fill="none" stroke="#241f31" stroke-width="9"/>
+    <path d="M34 200 V92 a66 46 0 0 1 132 0 V200 Z" fill="none" stroke="#1d1929" stroke-width="7"/>
+    <g fill="#241f31"><rect x="0" y="0" width="8" height="200"/><rect x="192" y="0" width="8" height="200"/></g>
+    <g stroke="#ff2ee6" opacity="0.85"><path d="M100 58 L12 160" stroke-width="2.4"/><path d="M100 58 L58 168" stroke-width="2"/><path d="M100 58 L100 172" stroke-width="1.8"/><path d="M100 58 L142 168" stroke-width="2"/><path d="M100 58 L188 160" stroke-width="2.4"/></g>
+    <circle cx="100" cy="58" r="5" fill="#ff2ee6"/>
+    <circle cx="100" cy="58" r="10" fill="none" stroke="#ff2ee6" stroke-width="1.4" opacity="0.5"/>
+    <ellipse cx="100" cy="196" rx="130" ry="42" fill="url(#il6-fog)"/>
+    <ellipse cx="52" cy="188" rx="70" ry="24" fill="url(#il6-fog)" opacity="0.8"/>
+    <ellipse cx="152" cy="192" rx="76" ry="26" fill="url(#il6-fog)" opacity="0.8"/>
+    <g fill="#05030a">
+      <circle cx="36" cy="168" r="9"/><rect x="27" y="172" width="18" height="28" rx="4"/>
+      <circle cx="74" cy="174" r="10"/><rect x="64" y="179" width="20" height="21" rx="4"/>
+      <circle cx="114" cy="170" r="9"/><rect x="105" y="175" width="18" height="25" rx="4"/>
+      <circle cx="152" cy="175" r="10"/><rect x="142" y="180" width="20" height="20" rx="4"/>
+      <circle cx="184" cy="170" r="8"/><rect x="176" y="174" width="16" height="26" rx="4"/>
+    </g>
+    <g fill="#ffb020" opacity="0.8"><rect x="16" y="60" width="12" height="5" rx="1"/><rect x="172" y="60" width="12" height="5" rx="1"/></g>
+    <g stroke="#6f6484" stroke-width="1.2" opacity="0.6"><line x1="14" y1="118" x2="186" y2="118"/><line x1="14" y1="146" x2="186" y2="146"/></g>
+  </svg>`,
+};
+
+// Zentraler Renderer: liefert die Illustration zu einer Illustrations-ID
+function djIllustrationHTML(illustrationId){
+  return DJ_ILLUSTRATIONS[illustrationId] || "";
+}
+
+// Avatar-Inhalt: DJs bekommen ihre gewählte SVG-Illustration,
+// alle anderen Personas weiterhin Emoji/Initialen
+function avatarInnerHTML(dj, fallbackName){
+  if(dj && dj.illustration && DJ_ILLUSTRATIONS[dj.illustration]) return djIllustrationHTML(dj.illustration);
+  return avatarContent(dj, fallbackName);
+}
 
 // Farbverläufe & Emojis zur Auswahl beim Erstellen einer Story
 const STORY_BACKGROUNDS = AVATAR_PRESETS.slice(0, 6).map(p => p.color);
@@ -2357,7 +2542,7 @@ function buildSwipeCard(dj, depth){
   const matchPct = state.tasteProfile ? computeDjMatchPercent(dj) : null;
 
   card.innerHTML = `
-    <div class="card-media">${avatarContent(dj)}</div>
+    <div class="card-media">${avatarInnerHTML(dj)}</div>
     <div class="card-shade"></div>
     ${isPromotedDj(dj) ? '<span class="badge-sponsored card-sponsored">Gesponsert</span>' : ""}
     ${matchPct !== null ? `<span class="match-pill">${matchPct}% Match</span>` : ""}
@@ -2518,7 +2703,7 @@ function buildDjCard(dj, isAd){
   card.className = "dj-card" + (isAd ? " sponsored" : "");
   card.onclick = () => openDjDetail(dj.id);
   card.innerHTML = `
-    <div class="avatar" style="background:${avatarBg(dj)};">${avatarContent(dj)}</div>
+    <div class="avatar" style="background:${avatarBg(dj)};">${avatarInnerHTML(dj)}</div>
     <div class="dj-card-info">
       <div class="name">${dj.name}
         ${dj.isPro ? '<span class="badge-pro">PRO</span>' : ''}
@@ -2538,7 +2723,7 @@ function openDjDetail(id){
   const body = document.getElementById("dj-detail-body");
   body.innerHTML = `
     <div class="profile-hero">
-      <div class="avatar round" style="background:${avatarBg(dj)};">${avatarContent(dj)}</div>
+      <div class="avatar round" style="background:${avatarBg(dj)};">${avatarInnerHTML(dj)}</div>
       <h3>${dj.name}</h3>
       <div class="genre">${dj.city}</div>
       <div class="stat-row">
@@ -2884,7 +3069,7 @@ function buildPostCard(post){
 
   el.innerHTML = `
     <div class="post-head">
-      <div class="avatar round ${hasUnseenStory ? "has-story" : ""}" style="background:${avatarBg(dj)};">${avatarContent(dj)}</div>
+      <div class="avatar round ${hasUnseenStory ? "has-story" : ""}" style="background:${avatarBg(dj)};">${avatarInnerHTML(dj)}</div>
       <div class="who"><div class="n">${dj.name}</div><div class="t">${post.time}</div></div>
     </div>
     <div class="post-text">${post.text}</div>
@@ -2931,7 +3116,7 @@ function commentRowHTML(c){
   if(c.name === "Du"){
     avatar = `<div class="avatar round" style="background:${state.userAvatar.color};">${state.userAvatar.emoji || initialsFromName(state.userDisplayName)}</div>`;
   } else if(dj){
-    avatar = `<div class="avatar round" style="background:${avatarBg(dj)};">${avatarContent(dj)}</div>`;
+    avatar = `<div class="avatar round" style="background:${avatarBg(dj)};">${avatarInnerHTML(dj)}</div>`;
   } else {
     avatar = `<div class="avatar round" style="background:${pseudoAvatarColor(c.name)};">${initialsFromName(c.name)}</div>`;
   }
@@ -3028,7 +3213,7 @@ function openDjProfile(djId){
 
   document.getElementById("dj-profile-body").innerHTML = `
     <div class="profile-hero">
-      <div class="avatar round" style="background:${avatarBg(dj)};">${avatarContent(dj)}</div>
+      <div class="avatar round" style="background:${avatarBg(dj)};">${avatarInnerHTML(dj)}</div>
       <h3>${dj.name}</h3>
       <div class="genre">${dj.city}</div>
       <div class="stat-row">
@@ -3217,7 +3402,7 @@ function openEventDetail(id){
       ${ev.lineup.map(name => {
         const dj = djs.find(d => d.name === name);
         return `<div class="mix-item" ${dj ? `onclick="openDjProfile(${dj.id})" style="cursor:pointer;"` : ""}>
-          <div class="avatar round" style="width:34px;height:34px;font-size:11px;background:${avatarBg(dj)};">${avatarContent(dj, name)}</div>
+          <div class="avatar round" style="width:34px;height:34px;font-size:11px;background:${avatarBg(dj)};">${avatarInnerHTML(dj, name)}</div>
           <div style="flex:1; font-size:13.5px; font-weight:600;">${name}</div>
           ${dj ? '<span class="subtle-text" style="font-size:11px;">Profil →</span>' : ""}
         </div>`;
@@ -3290,7 +3475,7 @@ function buildEventsTabCard(ev){
         <div class="event-lineup-avatars">
           ${ev.lineup.map(name => {
             const dj = djs.find(d => d.name === name);
-            return `<div class="avatar round" style="background:${avatarBg(dj)};">${avatarContent(dj, name)}</div>`;
+            return `<div class="avatar round" style="background:${avatarBg(dj)};">${avatarInnerHTML(dj, name)}</div>`;
           }).join("")}
           <span>${ev.lineup.join(" · ")}</span>
         </div>
@@ -3691,7 +3876,7 @@ function renderTasteResults(){
     ${ranked.map(({ dj, pct }) => `
       <div class="match-rank-card ${pct < 40 ? "low" : ""}" onclick="openDjDetailFromTaste(${dj.id})">
         <div class="match-pct">${pct}%</div>
-        <div class="avatar round" style="width:44px; height:44px; font-size:14px; background:${avatarBg(dj)};">${avatarContent(dj)}</div>
+        <div class="avatar round" style="width:44px; height:44px; font-size:14px; background:${avatarBg(dj)};">${avatarInnerHTML(dj)}</div>
         <div style="flex:1; min-width:0;">
           <div style="font-weight:700; font-size:14px;">${dj.name} ${isPromotedDj(dj) ? '<span class="badge-pro">PRO</span>' : ""}</div>
           <div class="subtle-text" style="font-size:11.5px;">${dj.genres.join(" · ")} · ★ ${dj.rating} · ${dj.price} €/Std.</div>
@@ -3804,7 +3989,7 @@ function updateRequestStatus(id, status){
 function renderSelfProfile(){
   const dj = getDj(state.loggedInDjId);
   document.getElementById("dj-self-avatar").style.background = avatarBg(dj);
-  document.getElementById("dj-self-avatar").textContent = avatarContent(dj);
+  document.getElementById("dj-self-avatar").innerHTML = avatarInnerHTML(dj);
   document.getElementById("dj-self-name").innerHTML = dj.name + (dj.isPro ? ' <span class="badge-pro">PRO</span>' : '');
   document.getElementById("dj-self-genre").textContent = dj.genres.join(" · ") + " · " + dj.city;
   document.getElementById("dj-self-followers").textContent = formatFollowers(dj.followers);
@@ -4075,7 +4260,7 @@ function chatSenderAvatarHTML(m){
   if(m.sender === "dj"){
     // Buchung: der angefragte DJ · Location-Anfrage: der anfragende DJ
     const dj = bookingReq ? getDj(bookingReq.djId) : djs.find(d => locationReq && d.name === locationReq.requester);
-    if(dj) return `<div class="avatar round" style="background:${avatarBg(dj)};">${avatarContent(dj)}</div>`;
+    if(dj) return `<div class="avatar round" style="background:${avatarBg(dj)};">${avatarInnerHTML(dj)}</div>`;
   }
   if(m.sender === "host"){
     const owner = locationReq ? privateLocations.find(l => l.id === locationReq.locationId).owner : hostProfile.name;
@@ -4770,7 +4955,7 @@ function renderSettingsOverlay(){
 
   document.getElementById("settings-body").innerHTML = `
     <div class="profile-hero" style="margin-bottom:6px;">
-      <div class="avatar round" id="settings-avatar-preview" style="width:76px;height:76px;font-size:28px;background:${avatar.color};">${avatar.emoji || initialsFromName(targetName)}</div>
+      <div class="avatar round" id="settings-avatar-preview" style="width:76px;height:76px;font-size:28px;background:${avatar.color};">${state.role === "dj" ? djIllustrationHTML(dj.illustration) : (avatar.emoji || initialsFromName(targetName))}</div>
     </div>
     <div class="section-title" style="margin-top:0; text-align:center;">Profilbild wählen</div>
     <div class="avatar-gallery" id="avatar-gallery"></div>
@@ -4806,6 +4991,21 @@ function renderSettingsOverlay(){
 function buildAvatarGallery(){
   const row = document.getElementById("avatar-gallery");
   row.innerHTML = "";
+
+  // v2: In der DJ-Rolle werden die sechs SVG-Illustrationen zur Auswahl angeboten
+  if(state.role === "dj"){
+    const dj = getDj(state.loggedInDjId);
+    Object.keys(DJ_ILLUSTRATIONS).forEach(idStr => {
+      const id = Number(idStr);
+      const opt = document.createElement("button");
+      opt.className = "avatar-option illustrated" + (dj.illustration === id ? " selected" : "");
+      opt.innerHTML = DJ_ILLUSTRATIONS[id];
+      opt.onclick = () => selectDjIllustration(id);
+      row.appendChild(opt);
+    });
+    return;
+  }
+
   const current = getCurrentAvatarEntity();
   AVATAR_PRESETS.forEach(preset => {
     const opt = document.createElement("button");
@@ -4815,6 +5015,15 @@ function buildAvatarGallery(){
     opt.onclick = () => selectAvatar(preset);
     row.appendChild(opt);
   });
+}
+
+// v2: Illustration des eingeloggten DJs wechseln (Einstellungen, DJ-Rolle)
+function selectDjIllustration(id){
+  getDj(state.loggedInDjId).illustration = id;
+  renderSettingsOverlay();
+  refreshAllAvatarDependentViews();
+  renderEventsTab();
+  showToast("Illustration aktualisiert ✓");
 }
 
 function selectAvatar(preset){
@@ -4891,7 +5100,7 @@ function refreshAllAvatarDependentViews(){
 function storyEntityInfo(key){
   if(key.startsWith("dj-")){
     const dj = getDj(Number(key.slice(3)));
-    return dj ? { name: dj.name, color: avatarBg(dj), content: avatarContent(dj) } : null;
+    return dj ? { name: dj.name, color: avatarBg(dj), content: avatarInnerHTML(dj) } : null;
   }
   if(key === "user-self"){
     return {
@@ -5066,7 +5275,7 @@ function renderStorySlide(){
 
   const avatarEl = document.getElementById("story-avatar");
   avatarEl.style.background = info.color;
-  avatarEl.textContent = info.content;
+  avatarEl.innerHTML = info.content; // kann eine SVG-Illustration sein (v2)
   document.getElementById("story-dj-name").textContent = info.name;
   document.getElementById("story-time").textContent = story.hoursAgo === 0 ? "gerade eben" : "vor " + story.hoursAgo + " Std.";
 
