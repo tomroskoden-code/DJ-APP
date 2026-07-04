@@ -874,6 +874,40 @@
   }
   .event-lineup-avatars .avatar:first-child{ margin-left:0; }
   .event-lineup-avatars span{ font-size:11px; color: var(--text-muted); margin-left:7px; }
+
+  /* ===================== Feature F: Playlist-Import & Geschmacks-Matching ===================== */
+  .taste-match-btn{
+    width:100%; margin-top:12px; padding:12px 14px;
+    display:flex; align-items:center; gap:10px; text-align:left;
+    background: linear-gradient(135deg, rgba(255,46,230,0.10), rgba(46,242,255,0.08)), var(--bg-card);
+    border:1px solid rgba(46,242,255,0.35); border-radius: var(--radius-md);
+    color: var(--text-primary);
+  }
+  .taste-match-btn:active{ transform: scale(0.98); }
+  .taste-match-btn .tm-text{ display:flex; flex-direction:column; gap:2px; }
+  .taste-match-btn .tm-text b{ font-size:13.5px; }
+  .taste-match-btn .tm-text small{ font-size:11px; color: var(--text-secondary); }
+  .taste-error{
+    display:none; align-items:flex-start; gap:8px;
+    background: rgba(255,77,109,0.12); border:1px solid rgba(255,77,109,0.4); color: var(--danger);
+    font-size:12.5px; padding:10px 12px; border-radius: var(--radius-sm); margin-bottom:14px; line-height:1.4;
+  }
+  .match-rank-card{
+    display:flex; align-items:center; gap:12px;
+    background: var(--bg-card); border:1px solid var(--border-subtle);
+    border-radius: var(--radius-lg); padding:12px; margin-bottom:10px;
+  }
+  .match-rank-card:active{ transform: scale(0.98); }
+  .match-pct{
+    flex:0 0 auto; width:52px; height:52px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:800; color: var(--neon-cyan);
+    border:2.5px solid var(--neon-cyan); box-shadow:0 0 12px rgba(46,242,255,0.35);
+  }
+  .match-rank-card.low .match-pct{ color: var(--text-muted); border-color: var(--border-subtle); box-shadow:none; }
+  .genre-bar-row{ display:flex; align-items:center; gap:10px; font-size:12px; color: var(--text-secondary); margin-bottom:7px; }
+  .genre-bar-row .g-label{ width:86px; flex:0 0 auto; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .genre-bar-row .g-pct{ width:38px; text-align:right; flex:0 0 auto; font-weight:700; color: var(--text-primary); }
 </style>
 </head>
 <body>
@@ -939,6 +973,12 @@
           </div>
         </div>
       </div>
+
+      <button class="taste-match-btn" onclick="openTasteMatch()">
+        <span style="font-size:20px;">🎵</span>
+        <span class="tm-text"><b>Was ist dein Sound?</b><small id="taste-match-sub">Playlist importieren & passende DJs finden</small></span>
+        <span style="margin-left:auto; color:var(--neon-cyan);">→</span>
+      </button>
 
       <div class="section-title" style="display:flex; align-items:center; justify-content:space-between;">
         <span>DJs in deiner Nähe</span>
@@ -1114,6 +1154,17 @@
         <h2>Profil</h2>
       </div>
       <div class="overlay-body" id="dj-profile-body"></div>
+    </section>
+
+    <!-- ===================== OVERLAY: Geschmacks-Matching (Feature F) ===================== -->
+    <section class="overlay" id="overlay-taste-match">
+      <div class="overlay-header">
+        <button class="back-btn" onclick="closeOverlay('overlay-taste-match')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <h2>Dein Sound</h2>
+      </div>
+      <div class="overlay-body" id="taste-match-body"></div>
     </section>
 
     <!-- ===================== OVERLAY: Buchungsflow ===================== -->
@@ -1769,6 +1820,8 @@ const state = {
   savedEvents: new Set(),      // Feature D: gemerkte Events ("Hingehen")
   newEventIds: new Set(),      // Feature D: neue Events seit letztem Tab-Besuch (Badge)
   remindedEventIds: new Set(), // Feature D: bereits gezeigte Erinnerungs-Toasts
+  tasteProfile: null,          // Feature F: { genres:{Genre:Gewicht}, topGenre, trackCount, recognizedCount, source }
+  manualGenres: new Set(),     // Feature F: manuelle Genre-Auswahl als Fallback
   theme: "dark",                  // "dark" oder "light", siehe setTheme()
   notificationsEnabled: true,     // rein simulierter Schalter ohne echte Push-Logik
   userDisplayName: "Du",          // Anzeigename der Partygänger-Demo-Persona
@@ -3018,6 +3071,413 @@ function showSavedEventReminders(){
   if(due.length === 0) return;
   state.remindedEventIds.add(due[0].id);
   showToast(`🔔 Erinnerung: ${due[0].name} heute um ${due[0].time} Uhr!`);
+}
+
+/* =======================================================================
+   FEATURE F: PLAYLIST-IMPORT & GESCHMACKS-MATCHING
+   Zwei Wege: Spotify-Link (im Prototyp SIMULIERT – die echte Web-API bräuchte
+   eine registrierte App + OAuth-Key, der in einer Single-HTML-Datei öffentlich
+   läge) oder Datei-Upload (CSV/JSON) mit flexibler Spaltenerkennung.
+   ======================================================================= */
+
+// Bekannte Artists → Genre (Demo-Wissensbasis für Dateien ohne Genre-Spalte)
+const MOCK_ARTIST_GENRES = {
+  "charlotte de witte": "Techno", "amelie lens": "Techno", "boris brejcha": "Techno",
+  "carl cox": "Techno", "sven väth": "Techno", "paul kalkbrenner": "Techno",
+  "fisher": "House", "disclosure": "House", "peggy gou": "House", "purple disco machine": "House",
+  "solomun": "Deep House", "dixon": "Deep House", "&me": "Deep House", "monolink": "Deep House",
+  "drake": "Hip-Hop", "travis scott": "Hip-Hop", "kendrick lamar": "Hip-Hop", "nicki minaj": "Hip-Hop",
+  "eminem": "Rap", "capital bra": "Rap", "apache 207": "Rap",
+  "david guetta": "EDM", "martin garrix": "EDM", "tiësto": "EDM", "tiesto": "EDM", "avicii": "EDM",
+  "gesaffelstein": "Electro", "justice": "Electro",
+  "bad bunny": "Reggaeton", "j balvin": "Reggaeton", "daddy yankee": "Reggaeton",
+  "shakira": "Latin", "ozuna": "Latin", "rosalía": "Latin",
+  "nine inch nails": "Industrial",
+};
+
+// Rohe Genre-Angaben aus Dateien → Genres der App-Welt
+const GENRE_ALIASES = {
+  "techno": "Techno", "tech house": "Techno", "melodic techno": "Techno", "hard techno": "Industrial",
+  "house": "House", "progressive house": "House", "deep house": "Deep House",
+  "edm": "EDM", "electronic": "EDM", "dance": "EDM", "big room": "EDM",
+  "electro": "Electro", "hip hop": "Hip-Hop", "hip-hop": "Hip-Hop", "hiphop": "Hip-Hop", "trap": "Hip-Hop",
+  "rap": "Rap", "deutschrap": "Rap",
+  "latin": "Latin", "latin pop": "Latin", "salsa": "Latin",
+  "reggaeton": "Reggaeton", "industrial": "Industrial",
+};
+
+// Verwandte Genres zählen im Matching zur Hälfte (siehe computeDjMatchPercent)
+const RELATED_GENRES = {
+  "Techno": ["Industrial", "House"],
+  "House": ["Deep House", "EDM", "Techno"],
+  "Deep House": ["House"],
+  "Hip-Hop": ["Rap"],
+  "Rap": ["Hip-Hop"],
+  "EDM": ["Electro", "House"],
+  "Electro": ["EDM"],
+  "Latin": ["Reggaeton"],
+  "Reggaeton": ["Latin"],
+  "Industrial": ["Techno"],
+};
+
+// Track-Pool für die simulierte Spotify-Extraktion (deterministisch je Playlist-ID)
+const SIMULATED_TRACK_POOL = [
+  { title: "Doppler", artist: "Charlotte de Witte", genre: "Techno" },
+  { title: "In Silence", artist: "Amelie Lens", genre: "Techno" },
+  { title: "Gravity", artist: "Boris Brejcha", genre: "Techno" },
+  { title: "Losing It", artist: "FISHER", genre: "House" },
+  { title: "Latch", artist: "Disclosure", genre: "House" },
+  { title: "Starry Night", artist: "Peggy Gou", genre: "House" },
+  { title: "Home", artist: "Solomun", genre: "Deep House" },
+  { title: "The Sun", artist: "Monolink", genre: "Deep House" },
+  { title: "SICKO MODE", artist: "Travis Scott", genre: "Hip-Hop" },
+  { title: "HUMBLE.", artist: "Kendrick Lamar", genre: "Hip-Hop" },
+  { title: "Godzilla", artist: "Eminem", genre: "Rap" },
+  { title: "Roller", artist: "Apache 207", genre: "Rap" },
+  { title: "Titanium", artist: "David Guetta", genre: "EDM" },
+  { title: "Animals", artist: "Martin Garrix", genre: "EDM" },
+  { title: "Pursuit", artist: "Gesaffelstein", genre: "Electro" },
+  { title: "Tití Me Preguntó", artist: "Bad Bunny", genre: "Reggaeton" },
+  { title: "Mi Gente", artist: "J Balvin", genre: "Reggaeton" },
+  { title: "Hips Don't Lie", artist: "Shakira", genre: "Latin" },
+  { title: "Closer", artist: "Nine Inch Nails", genre: "Industrial" },
+  { title: "Rave Dove", artist: "Sven Väth", genre: "Techno" },
+];
+
+// Demo-CSV für den "Ohne Datei testen"-Weg
+const DEMO_PLAYLIST_CSV = `Titel;Interpret;Genre
+Doppler;Charlotte de Witte;Techno
+Losing It;FISHER;House
+Home;Solomun;Deep House
+In Silence;Amelie Lens;Techno
+Latch;Disclosure;House
+Gravity;Boris Brejcha;Techno
+Starry Night;Peggy Gou;House
+The Sun;Monolink;Deep House`;
+
+function openTasteMatch(){
+  if(state.tasteProfile) renderTasteResults();
+  else renderTasteMatchIntro();
+  openOverlay("overlay-taste-match");
+}
+
+function renderTasteMatchIntro(){
+  document.getElementById("taste-match-body").innerHTML = `
+    <div class="taste-error" id="taste-error"></div>
+
+    <div class="info-block">
+      <h4>Spotify-Playlist verknüpfen</h4>
+      <p class="subtle-text" style="margin:0 0 10px;">Füge den Link einer Spotify-Playlist ein (z.B. open.spotify.com/playlist/…).</p>
+      <div class="form-group" style="margin-bottom:10px;">
+        <input type="text" id="spotify-link-input" placeholder="https://open.spotify.com/playlist/…">
+      </div>
+      <button class="btn btn-primary" onclick="importSpotifyPlaylist()">🎧 Playlist analysieren</button>
+      <p class="subtle-text" style="margin:10px 0 0; font-size:11.5px;">ℹ️ Demo-Modus: Die Titel-Extraktion wird simuliert. Eine echte Spotify-Anbindung benötigt eine registrierte App mit API-Key (OAuth) und ist im Single-File-Prototyp bewusst nicht enthalten.</p>
+    </div>
+
+    <div class="info-block">
+      <h4>Playlist-Export hochladen</h4>
+      <p class="subtle-text" style="margin:0 0 10px;">CSV oder JSON mit Spalten wie „Titel/Title“, „Interpret/Artist“, optional „Genre“. Die Spalten werden automatisch erkannt.</p>
+      <input type="file" id="playlist-file-input" accept=".csv,.json,text/csv,application/json" style="display:none;" onchange="handlePlaylistFileSelect(event)">
+      <button class="btn btn-outline" onclick="document.getElementById('playlist-file-input').click()">📄 CSV / JSON auswählen</button>
+      <button class="btn btn-outline btn-sm" style="width:100%; margin-top:8px;" onclick="loadDemoPlaylist()">✨ Ohne Datei testen (Demo-Playlist)</button>
+    </div>
+  `;
+}
+
+function showTasteError(msg){
+  const el = document.getElementById("taste-error");
+  if(!el){ showToast(msg); return; }
+  el.style.display = "flex";
+  el.innerHTML = "⚠️ " + msg;
+}
+
+/* ---- Spotify-Link: Validierung + deterministische Demo-Extraktion ---- */
+const SPOTIFY_PLAYLIST_RE = /(?:open\.spotify\.com\/playlist\/|spotify:playlist:)([A-Za-z0-9]{8,})/;
+
+function importSpotifyPlaylist(){
+  const raw = document.getElementById("spotify-link-input").value.trim();
+  const match = raw.match(SPOTIFY_PLAYLIST_RE);
+  if(!match){
+    showTasteError('Das sieht nicht nach einem Spotify-Playlist-Link aus. Erwartet wird z.B. "https://open.spotify.com/playlist/37i9dQZF1DX…".');
+    return;
+  }
+  // Aus der Playlist-ID wird ein stabiler Seed abgeleitet, damit derselbe Link
+  // immer dieselbe (simulierte) Playlist ergibt
+  let seed = 0;
+  for(const ch of match[1]){ seed = (seed * 31 + ch.charCodeAt(0)) % 100000; }
+  const count = 10 + (seed % 8);
+  const tracks = [];
+  for(let i = 0; i < count; i++){
+    tracks.push(SIMULATED_TRACK_POOL[(seed + i * 3) % SIMULATED_TRACK_POOL.length]);
+  }
+  state.tasteProfile = buildTasteProfile(tracks, "Spotify-Playlist (simulierte Extraktion)");
+  renderTasteResults();
+}
+
+function loadDemoPlaylist(){
+  const tracks = parsePlaylistCSV(DEMO_PLAYLIST_CSV);
+  state.tasteProfile = buildTasteProfile(tracks, "Demo-Playlist");
+  renderTasteResults();
+}
+
+/* ---- Datei-Upload: CSV/JSON mit flexibler Spaltenerkennung & Fehlermeldungen ---- */
+function handlePlaylistFileSelect(e){
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const text = String(reader.result || "");
+      const looksJson = file.name.toLowerCase().endsWith(".json") || /^[\[{]/.test(text.trim());
+      const tracks = looksJson ? parsePlaylistJSON(text) : parsePlaylistCSV(text);
+      if(tracks.length === 0) throw new Error("In der Datei wurden keine Titel gefunden.");
+      const profile = buildTasteProfile(tracks, `Datei „${file.name}“`);
+      if(!profile){
+        renderTasteManualPick(tracks.length); // kein Genre erkennbar → manuelle Auswahl
+        return;
+      }
+      state.tasteProfile = profile;
+      renderTasteResults();
+    } catch(err){
+      showTasteError(err.message);
+    }
+  };
+  reader.onerror = () => showTasteError("Die Datei konnte nicht gelesen werden.");
+  reader.readAsText(file);
+  e.target.value = "";
+}
+
+function parsePlaylistCSV(text){
+  const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
+  if(lines.length < 2) throw new Error("Die CSV braucht eine Kopfzeile und mindestens einen Titel.");
+
+  // Trennzeichen erkennen: das Zeichen, das die Kopfzeile am häufigsten teilt
+  const delimiter = [";", ",", "\t"].sort((a, b) => lines[0].split(b).length - lines[0].split(a).length)[0];
+  const parseLine = line => {
+    const cols = []; let cur = ""; let inQuotes = false;
+    for(const ch of line){
+      if(ch === '"'){ inQuotes = !inQuotes; }
+      else if(ch === delimiter && !inQuotes){ cols.push(cur); cur = ""; }
+      else cur += ch;
+    }
+    cols.push(cur);
+    return cols.map(c => c.trim());
+  };
+
+  const header = parseLine(lines[0]).map(h => h.toLowerCase());
+  const findCol = keys => header.findIndex(h => keys.some(k => h === k || h.includes(k)));
+  const titleCol = findCol(["title", "titel", "track", "song", "name"]);
+  const artistCol = findCol(["artist", "interpret", "künstler", "kuenstler"]);
+  const genreCol = findCol(["genre", "stil", "style"]);
+
+  if(titleCol === -1 && artistCol === -1){
+    throw new Error('Keine passenden Spalten gefunden. Erwartet werden Spaltennamen wie „Title/Titel“, „Artist/Interpret“ und optional „Genre“.');
+  }
+
+  return lines.slice(1).map(parseLine).map(cols => ({
+    title: titleCol >= 0 ? (cols[titleCol] || "") : "",
+    artist: artistCol >= 0 ? (cols[artistCol] || "") : "",
+    genre: genreCol >= 0 ? (cols[genreCol] || "") : "",
+  })).filter(t => t.title || t.artist);
+}
+
+function parsePlaylistJSON(text){
+  let data;
+  try { data = JSON.parse(text); }
+  catch(err){ throw new Error("Die Datei ist kein gültiges JSON."); }
+
+  const arr = Array.isArray(data) ? data : (data.tracks || data.items || data.songs);
+  if(!Array.isArray(arr)) throw new Error('Im JSON wurde keine Titel-Liste gefunden (erwartet: Array oder Feld „tracks“ / „items“ / „songs“).');
+
+  const pick = (obj, keys) => {
+    for(const k of Object.keys(obj)){ if(keys.includes(k.toLowerCase())) return obj[k]; }
+    return "";
+  };
+
+  return arr.map(item => {
+    const t = item && item.track ? item.track : item; // Spotify-Export-Form { track: {…} }
+    if(!t || typeof t !== "object") return null;
+    let artist = pick(t, ["artist", "interpret", "künstler", "artistname", "artist_name"]);
+    if(!artist && Array.isArray(t.artists) && t.artists.length){
+      artist = t.artists[0].name || t.artists[0];
+    }
+    return {
+      title: String(pick(t, ["title", "titel", "name", "track", "song"]) || ""),
+      artist: String(artist || ""),
+      genre: String(pick(t, ["genre", "genres", "stil", "style"]) || ""),
+    };
+  }).filter(t => t && (t.title || t.artist));
+}
+
+/* ---- Geschmacksprofil & Match-Score ---- */
+function normalizeGenre(raw){
+  const key = String(raw).trim().toLowerCase();
+  if(!key) return null;
+  if(GENRE_ALIASES[key]) return GENRE_ALIASES[key];
+  for(const alias of Object.keys(GENRE_ALIASES)){
+    if(key.includes(alias)) return GENRE_ALIASES[alias];
+  }
+  return null;
+}
+
+// Aus Tracks ein Profil bauen: Genre direkt aus der Datei oder über die Artist-Wissensbasis.
+// Liefert null, wenn gar kein Genre erkennbar ist (→ manuelle Auswahl als Fallback).
+function buildTasteProfile(tracks, sourceLabel){
+  const counts = {};
+  let recognized = 0;
+  tracks.forEach(t => {
+    let genre = normalizeGenre(t.genre);
+    if(!genre && t.artist) genre = MOCK_ARTIST_GENRES[t.artist.trim().toLowerCase()] || null;
+    if(genre){
+      counts[genre] = (counts[genre] || 0) + 1;
+      recognized++;
+    }
+  });
+  if(recognized === 0) return null;
+
+  const genres = {};
+  Object.entries(counts).forEach(([g, c]) => { genres[g] = c / recognized; });
+  const topGenre = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+  return { genres, topGenre, trackCount: tracks.length, recognizedCount: recognized, source: sourceLabel };
+}
+
+/* Match-Score eines DJs gegen das Geschmacksprofil (0..1 → Prozent):
+   – 70% Genre-Überlappung: Summe der Profil-Gewichte aller Genres, die der DJ
+     bedient; verwandte Genres (RELATED_GENRES) zählen zur Hälfte.
+   – 20% Top-Genre-Bonus: voller Bonus, wenn der DJ das häufigste Genre der
+     Playlist spielt (der „Hauptgeschmack“ soll dominieren).
+   – 10% Qualität: normalisiertes DJ-Rating (rating/5), löst Gleichstände auf. */
+function computeDjMatchPercent(dj){
+  const profile = state.tasteProfile;
+  if(!profile) return null;
+
+  let genreScore = 0;
+  Object.entries(profile.genres).forEach(([genre, weight]) => {
+    if(dj.genres.includes(genre)) genreScore += weight;
+    else if((RELATED_GENRES[genre] || []).some(rel => dj.genres.includes(rel))) genreScore += weight * 0.5;
+  });
+  const topBonus = dj.genres.includes(profile.topGenre) ? 1 : 0;
+  const score = 0.7 * genreScore + 0.2 * topBonus + 0.1 * (dj.rating / 5);
+  return Math.round(score * 100);
+}
+
+// Fallback, wenn aus der Datei keine Genres ableitbar sind: manuelle Auswahl
+function renderTasteManualPick(trackCount){
+  state.manualGenres.clear();
+  const allGenres = [...new Set(djs.flatMap(d => d.genres))];
+  document.getElementById("taste-match-body").innerHTML = `
+    <div class="info-block">
+      <h4>Genres manuell wählen</h4>
+      <p class="subtle-text" style="margin:0 0 12px;">Deine Datei (${trackCount} Titel) enthielt keine erkennbaren Genres oder bekannten Artists. Wähle stattdessen 1–3 Genres, die deinen Geschmack treffen:</p>
+      <div class="chip-row" id="manual-genre-row">
+        ${allGenres.map(g => `<button class="chip" onclick="toggleManualGenre(this, '${g}')">${g}</button>`).join("")}
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="applyManualGenres()">Matching starten</button>
+    <button class="btn btn-outline" style="margin-top:8px;" onclick="renderTasteMatchIntro()">← Andere Quelle wählen</button>
+  `;
+}
+
+function toggleManualGenre(chip, genre){
+  state.manualGenres.has(genre) ? state.manualGenres.delete(genre) : state.manualGenres.add(genre);
+  chip.classList.toggle("selected");
+}
+
+function applyManualGenres(){
+  if(state.manualGenres.size === 0){
+    showToast("Bitte wähle mindestens ein Genre.");
+    return;
+  }
+  const genres = {};
+  const list = [...state.manualGenres];
+  list.forEach(g => { genres[g] = 1 / list.length; });
+  state.tasteProfile = { genres, topGenre: list[0], trackCount: list.length, recognizedCount: list.length, source: "Manuelle Genre-Auswahl" };
+  renderTasteResults();
+}
+
+/* ---- Ergebnis-Screen: Profil, DJ-Ranking, passende Partys ---- */
+function renderTasteResults(){
+  const profile = state.tasteProfile;
+  const ranked = djs
+    .map(dj => ({ dj, pct: computeDjMatchPercent(dj) }))
+    .sort((a, b) => b.pct - a.pct);
+  const topNames = ranked.slice(0, 3).map(r => r.dj.name);
+  const matchingEvents = events
+    .filter(ev => ev.lineup.some(n => topNames.includes(n)))
+    .sort((a, b) => ((a.date || "") + a.time).localeCompare((b.date || "") + b.time));
+
+  const genreBars = Object.entries(profile.genres)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([g, w]) => `
+      <div class="genre-bar-row">
+        <span class="g-label">${g}</span>
+        <div class="rating-bar-track" style="flex:1;"><div class="rating-bar-fill" style="width:${Math.round(w * 100)}%;"></div></div>
+        <span class="g-pct">${Math.round(w * 100)}%</span>
+      </div>`).join("");
+
+  document.getElementById("taste-match-body").innerHTML = `
+    <div class="info-block">
+      <h4>Dein Geschmacksprofil</h4>
+      <p class="subtle-text" style="margin:0 0 12px;">${profile.source} · ${profile.trackCount} Titel analysiert${profile.recognizedCount < profile.trackCount ? ` (${profile.recognizedCount} zugeordnet)` : ""}</p>
+      ${genreBars}
+    </div>
+
+    <div class="section-title">Passende DJs für deinen Geschmack</div>
+    ${ranked.map(({ dj, pct }) => `
+      <div class="match-rank-card ${pct < 40 ? "low" : ""}" onclick="openDjDetailFromTaste(${dj.id})">
+        <div class="match-pct">${pct}%</div>
+        <div class="avatar round" style="width:44px; height:44px; font-size:14px; background:${avatarBg(dj)};">${avatarContent(dj)}</div>
+        <div style="flex:1; min-width:0;">
+          <div style="font-weight:700; font-size:14px;">${dj.name} ${isPromotedDj(dj) ? '<span class="badge-pro">PRO</span>' : ""}</div>
+          <div class="subtle-text" style="font-size:11.5px;">${dj.genres.join(" · ")} · ★ ${dj.rating} · ${dj.price} €/Std.</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); startBookingFromTaste(${dj.id})">Buchen</button>
+      </div>`).join("")}
+
+    <div class="section-title">Passende Partys für dich</div>
+    ${matchingEvents.length ? matchingEvents.map(ev => `
+      <div class="event-card" onclick="openEventDetail(${ev.id})">
+        <div class="event-time-box"><div class="day">${ev.date ? computeDayLabel(ev.date) : ev.dayLabel}</div><div class="time">${ev.time}</div></div>
+        <div class="event-info">
+          <div class="n">${ev.name} ${state.savedEvents.has(ev.id) ? '<span class="badge-saved">✓ Gemerkt</span>' : ""}</div>
+          <div class="loc"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ICONS.location}</svg>${formatEventPlace(ev)}</div>
+          <div class="lineup">${ev.lineup.join(" · ")}</div>
+        </div>
+        <button class="btn ${state.savedEvents.has(ev.id) ? "btn-outline followed" : "btn-outline"} btn-sm" style="align-self:center;" onclick="event.stopPropagation(); toggleSaveEventFromTaste(${ev.id})">${state.savedEvents.has(ev.id) ? "✓" : "🔔"}</button>
+      </div>`).join("") : '<p class="subtle-text">Aktuell keine Events mit deinen Top-DJs – folge ihnen, um nichts zu verpassen.</p>'}
+
+    <button class="btn btn-outline" style="margin-top:6px;" onclick="renderTasteMatchIntro()">↺ Neue Playlist importieren</button>
+  `;
+
+  updateTasteMatchButton();
+  renderDjList(); // Match-Pills auf den Discovery-Karten aktualisieren
+}
+
+// Einstiegs-Button im Discovery spiegelt den Profil-Status wider
+function updateTasteMatchButton(){
+  const sub = document.getElementById("taste-match-sub");
+  if(!sub) return;
+  sub.textContent = state.tasteProfile
+    ? `Profil aktiv · Top-Genre: ${state.tasteProfile.topGenre} · Ergebnisse ansehen`
+    : "Playlist importieren & passende DJs finden";
+}
+
+// Das DJ-Detail-Overlay liegt im DOM vor dem Matching-Overlay → Matching zuerst schließen
+function openDjDetailFromTaste(djId){
+  closeOverlay("overlay-taste-match");
+  openDjDetail(djId);
+}
+
+function startBookingFromTaste(djId){
+  closeOverlay("overlay-taste-match");
+  startBooking(djId);
+}
+
+function toggleSaveEventFromTaste(eventId){
+  toggleSaveEvent(eventId);
+  renderTasteResults();
 }
 
 /* =======================================================================
