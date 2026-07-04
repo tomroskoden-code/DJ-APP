@@ -783,8 +783,8 @@
   }
   .swipe-hint.hint-follow{ left:16px; transform:rotate(-12deg); color:var(--neon-cyan); border-color:var(--neon-cyan); }
   .swipe-hint.hint-book{ right:16px; transform:rotate(12deg); color:var(--neon-magenta); border-color:var(--neon-magenta); }
-  .swipe-hint.hint-next{ top:auto; bottom:90px; left:50%; transform:translateX(-50%) rotate(-4deg); color:#fff; border-color:#fff; }
-  .swipe-hint.hint-back{ top:70px; left:50%; transform:translateX(-50%) rotate(4deg); color:var(--warning); border-color:var(--warning); }
+  .swipe-hint.hint-next{ top:70px; left:50%; transform:translateX(-50%) rotate(-4deg); color:#fff; border-color:#fff; }
+  .swipe-hint.hint-back{ top:auto; bottom:90px; left:50%; transform:translateX(-50%) rotate(4deg); color:var(--warning); border-color:var(--warning); }
   /* Herz-Feedback beim Folgen-Swipe */
   .heart-burst{
     position:absolute; top:50%; left:50%; z-index:4; font-size:84px;
@@ -796,9 +796,12 @@
     45%{ transform:translate(-50%,-50%) scale(1.25); opacity:1; }
     100%{ transform:translate(-50%,-50%) scale(1); opacity:0; }
   }
-  /* Vorherige Karte "fällt" beim Zurück-Swipe von oben ein */
+  /* v2: Beim Zurück-Swipe (runter) gleitet die vorherige Karte von oben ein,
+     beim Weiter-Swipe (hoch) die nächste von unten */
   .swipe-card.enter-back{ animation:dropIn .3s ease; }
-  @keyframes dropIn{ from{ transform:translateY(-40px) scale(0.96); opacity:0; } to{ transform:translateY(0) scale(1); opacity:1; } }
+  @keyframes dropIn{ from{ transform:translateY(-46px) scale(0.96); opacity:0; } to{ transform:translateY(0) scale(1); opacity:1; } }
+  .swipe-card.enter-next{ animation:riseIn .3s ease; }
+  @keyframes riseIn{ from{ transform:translateY(46px) scale(0.96); opacity:0; } to{ transform:translateY(0) scale(1); opacity:1; } }
   /* End-Screen des Stacks */
   .stack-empty{
     position:absolute; inset:0; border-radius:24px;
@@ -2279,7 +2282,8 @@ function renderDjListClassic(){
 
 /* =======================================================================
    FEATURE A+B: TINDER-STYLE CARD-STACK
-   Gesten: links = Buchen, rechts = Folgen, unten = nächster DJ, oben = zurück.
+   Gesten (v2): links = Buchen, rechts = Folgen (horizontal unverändert),
+   OBEN = nächster DJ, UNTEN = vorheriger DJ (vertikale Navigation).
    Feature B: Pro-/Gesponserte DJs erscheinen immer zuerst im Stapel.
    ======================================================================= */
 function isPromotedDj(dj){ return dj.isPro === true || dj.sponsored === true; }
@@ -2414,11 +2418,12 @@ function attachSwipeHandlers(card, dj){
       return;
     }
 
+    // Dominanter Bewegungsvektor entscheidet zwischen horizontal und vertikal
     const horizontal = Math.abs(dx) >= Math.abs(dy);
     if(horizontal && dx <= -THRESHOLD)      swipeAction(card, dj, "book");
     else if(horizontal && dx >= THRESHOLD)  swipeAction(card, dj, "follow");
-    else if(!horizontal && dy >= THRESHOLD) swipeAction(card, dj, "next");
-    else if(!horizontal && dy <= -THRESHOLD) swipeAction(card, dj, "back");
+    else if(!horizontal && dy <= -THRESHOLD) swipeAction(card, dj, "next"); // hoch = weiter
+    else if(!horizontal && dy >= THRESHOLD)  swipeAction(card, dj, "back"); // runter = zurück
     else resetSwipeCard(card); // Swipe abgebrochen → Snap-back
   };
 
@@ -2432,8 +2437,8 @@ function updateSwipeHints(card, dx, dy){
   const strength = v => Math.min(1, Math.max(0, (Math.abs(v) - 20) / 70));
   card.querySelector(".hint-book").style.opacity   = horizontal && dx < 0 ? strength(dx) : 0;
   card.querySelector(".hint-follow").style.opacity = horizontal && dx > 0 ? strength(dx) : 0;
-  card.querySelector(".hint-next").style.opacity   = !horizontal && dy > 0 ? strength(dy) : 0;
-  card.querySelector(".hint-back").style.opacity   = !horizontal && dy < 0 ? strength(dy) : 0;
+  card.querySelector(".hint-next").style.opacity   = !horizontal && dy < 0 ? strength(dy) : 0;
+  card.querySelector(".hint-back").style.opacity   = !horizontal && dy > 0 ? strength(dy) : 0;
 }
 
 function resetSwipeCard(card){
@@ -2480,17 +2485,27 @@ function swipeAction(card, dj, action){
   }
 
   if(action === "next"){
-    flyOutCard(card, 0, 620, 4, () => { d.index++; renderDjStack(); });
+    // Karte gleitet nach oben heraus, die nächste kommt von unten herein
+    flyOutCard(card, 0, -620, -4, () => {
+      d.index++;
+      renderDjStack();
+      const top = document.querySelector("#dj-stack-wrap .swipe-card:not(.behind)");
+      if(top) top.classList.add("enter-next");
+    });
     return;
   }
 
   if(action === "back"){
     if(d.index > 0){
-      d.index--;
-      renderDjStack();
-      const top = document.querySelector("#dj-stack-wrap .swipe-card:not(.behind)");
-      if(top) top.classList.add("enter-back");
+      // Karte gleitet nach unten heraus, die vorherige kommt von oben herein
+      flyOutCard(card, 0, 620, 4, () => {
+        d.index--;
+        renderDjStack();
+        const top = document.querySelector("#dj-stack-wrap .swipe-card:not(.behind)");
+        if(top) top.classList.add("enter-back");
+      });
     } else {
+      // Grenzfall erster DJ: kein Zurück möglich → federndes Bounce-Back als Feedback
       resetSwipeCard(card);
       showToast("Du bist am Anfang des Stapels");
     }
