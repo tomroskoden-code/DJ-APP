@@ -989,11 +989,55 @@
     animation:spin .8s linear infinite;
   }
   @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  /* ===================== v2: Anmeldescreen ===================== */
+  .login-screen{
+    position:absolute; inset:0; z-index:300;
+    display:flex; align-items:center; justify-content:center;
+    background: var(--bg-app); overflow:hidden;
+    transition: opacity .45s ease, visibility .45s ease;
+  }
+  .login-screen.hidden{ opacity:0; visibility:hidden; pointer-events:none; }
+  /* Dezent animierte Neon-Blobs im Hintergrund */
+  .login-blob{
+    position:absolute; border-radius:50%; filter:blur(46px); opacity:0.5;
+    animation: blobFloat 9s ease-in-out infinite; pointer-events:none;
+  }
+  .login-blob.b1{ width:230px; height:230px; top:-60px; left:-70px; background:radial-gradient(circle, var(--neon-magenta), transparent 70%); }
+  .login-blob.b2{ width:260px; height:260px; bottom:-80px; right:-80px; background:radial-gradient(circle, var(--neon-violet), transparent 70%); animation-delay:-3s; }
+  .login-blob.b3{ width:180px; height:180px; top:38%; right:-60px; background:radial-gradient(circle, var(--neon-cyan), transparent 70%); animation-delay:-6s; }
+  @keyframes blobFloat{ 0%,100%{ transform:translate(0,0) scale(1); } 50%{ transform:translate(14px,-18px) scale(1.08); } }
+  .login-content{ position:relative; z-index:2; text-align:center; padding:0 34px; width:100%; }
+  .login-logo{
+    font-size:38px; font-weight:800; letter-spacing:0.5px; margin-bottom:10px;
+    background:linear-gradient(90deg, var(--neon-magenta), var(--neon-cyan));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .login-logo span{ font-weight:300; }
+  .login-tagline{ color:var(--text-secondary); font-size:14.5px; line-height:1.55; margin:0 0 34px; }
+  .login-btn{ font-size:16px; padding:16px; box-shadow:0 8px 30px rgba(207,15,180,0.35); }
+  .login-hint{ color:var(--text-muted); font-size:11.5px; margin-top:16px; }
 </style>
 </head>
 <body>
 
 <div class="phone" id="app-phone" data-theme="light">
+
+  <!-- ===================== v2: Anmeldescreen (erscheint bei jedem Laden) ===================== -->
+  <div class="login-screen" id="login-screen">
+    <div class="login-blob b1"></div><div class="login-blob b2"></div><div class="login-blob b3"></div>
+    <div class="login-content">
+      <div class="login-logo">Beat<span>Spot</span></div>
+      <p class="login-tagline">Finde deinen Sound.<br>Buche deinen DJ. Feier deine Nacht.</p>
+      <!-- PLATZHALTER für echte Authentifizierung:
+           Hier später ein <form> mit E-Mail-/Passwort-Feldern und Validierung einsetzen
+           und dismissLogin() erst nach erfolgreichem Login aufrufen.
+           Bewusst KEIN "eingeloggt bleiben" via localStorage – der Screen soll bei
+           jedem Öffnen der Datei erscheinen (Prototyp-Vereinfachung). -->
+      <button class="btn btn-primary login-btn" onclick="dismissLogin()">Anmelden</button>
+      <p class="login-hint">Prototyp-Anmeldung: ein Tap genügt – kein Konto nötig.</p>
+    </div>
+  </div>
 
   <!-- ===================== Header mit Rollen-Switcher ===================== -->
   <header class="app-header">
@@ -5178,6 +5222,14 @@ function setupPullToRefresh(){
       showToast("Feed aktualisiert ✓");
     }, 700);
   });
+}
+
+/* =======================================================================
+   v2: ANMELDESCREEN
+   ======================================================================= */
+// Blendet den Anmeldescreen aus; die App dahinter ist bereits vollständig gerendert.
+function dismissLogin(){
+  document.getElementById("login-screen").classList.add("hidden");
 }
 
 /* =======================================================================
