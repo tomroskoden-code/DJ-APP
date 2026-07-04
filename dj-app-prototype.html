@@ -22,6 +22,11 @@
     --danger: #ff4d6d;
     --warning: #ffb020;
     --on-accent: #0b0710;            /* Textfarbe auf Neon-/Akzentflächen */
+    /* v2: Kartenfarben (SVG-Stadtkarten) */
+    --map-base:#151022; --map-block:#241c3a; --map-block2:#2c2246;
+    --map-road:#3d3258; --map-road-casing:#0e0a1a;
+    --map-park:#1c3d2e; --map-water:#17324e; --map-sand:#3a2f4b;
+    --map-label:#9a90b4; --map-road-label:#847a9e;
     --shadow-card: 0 2px 10px rgba(0,0,0,0.25);
     --shadow-pop: 0 10px 34px rgba(0,0,0,0.5);
     --radius-lg: 20px;
@@ -49,6 +54,10 @@
     --danger: #d92655;
     --warning: #a86f07;
     --on-accent: #ffffff;
+    --map-base:#edeff5; --map-block:#dde1ea; --map-block2:#d1d6e3;
+    --map-road:#ffffff; --map-road-casing:#c7cddc;
+    --map-park:#cbe7cf; --map-water:#bcd9f2; --map-sand:#f0e3c0;
+    --map-label:#4f4866; --map-road-label:#6d6584;
     --shadow-card: 0 2px 12px rgba(46,30,80,0.08);
     --shadow-pop: 0 8px 28px rgba(46,30,80,0.16);
   }
@@ -420,17 +429,17 @@
   /* ===================== Party-Karte ===================== */
   .map-canvas{
     position:relative;
-    height:260px;
+    height:300px;
     border-radius: var(--radius-lg);
     overflow:hidden;
-    background-color:#120c1c;
-    background-image:
-      repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0 2px, transparent 2px 46px),
-      repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0 2px, transparent 2px 62px),
-      radial-gradient(circle at 30% 30%, rgba(138,63,252,0.25), transparent 55%),
-      radial-gradient(circle at 80% 75%, rgba(46,242,255,0.15), transparent 50%);
+    background: var(--map-base);
     border:1px solid var(--border-subtle);
+    box-shadow: var(--shadow-card);
   }
+  /* v2: handgebaute SVG-Stadtkarte füllt den Canvas; Pins liegen darüber */
+  .map-canvas svg.city-map{ position:absolute; inset:0; width:100%; height:100%; }
+  .map-pin{ z-index:2; }
+  .map-poi-legend{ width:11px; height:8px; border-radius:2px; display:inline-block; margin-right:5px; }
   .map-pin{
     position:absolute;
     transform: translate(-50%,-100%);
@@ -1252,11 +1261,18 @@
     <!-- TAB 3: Party-Karte (für alle Rollen gleich) -->
     <section class="tab-content" id="tab-3">
       <div class="section-title">Party-Karte</div>
+      <div class="subtab-switch" style="margin-bottom:10px;">
+        <button id="city-btn-voltstadt" class="active" onclick="setMapCity('voltstadt')">⚡ Voltstadt</button>
+        <button id="city-btn-bassbucht" onclick="setMapCity('bassbucht')">🌊 Bassbucht</button>
+      </div>
       <div class="map-canvas" id="map-canvas"></div>
       <div class="map-legend">
         <span><span class="dotlegend" style="background:var(--neon-magenta);"></span>Event</span>
         <span><span class="dotlegend" style="background:var(--neon-cyan);"></span>Dein Gig</span>
         <span><span class="dotlegend" style="background:var(--success);"></span>Location</span>
+        <span><span class="map-poi-legend" style="background:var(--neon-magenta); opacity:0.8;"></span>Club/Venue</span>
+        <span><span class="map-poi-legend" style="background:var(--map-park);"></span>Park</span>
+        <span><span class="map-poi-legend" style="background:var(--map-water);"></span>Wasser</span>
       </div>
 
       <div class="section-title">Heute Abend in deiner Nähe</div>
@@ -1454,7 +1470,7 @@
         </div>
         <div class="form-group">
           <label>Ort / Location</label>
-          <input type="text" id="spontan-location" placeholder="z.B. Warehouse 9, Berlin">
+          <input type="text" id="spontan-location" placeholder="z.B. Warehouse 9, Voltstadt">
         </div>
         <div class="form-group">
           <label>Datum</label>
@@ -1506,11 +1522,11 @@
       <div class="overlay-body">
         <div class="form-group">
           <label>Location-Name</label>
-          <input type="text" id="loc-name" placeholder="z.B. Dachterrasse Neukölln">
+          <input type="text" id="loc-name" placeholder="z.B. Dachterrasse Nordufer">
         </div>
         <div class="form-group">
           <label>Adresse / Stadt</label>
-          <input type="text" id="loc-address" placeholder="z.B. Weserstraße 12, Berlin">
+          <input type="text" id="loc-address" placeholder="z.B. Weserstraße 12, Voltstadt">
         </div>
         <div class="form-group">
           <label>Kapazität (Personen)</label>
@@ -1708,10 +1724,10 @@ const ICONS = {
 // isPro: BeatSpot-Pro-Abo aktiv? | sponsored: erscheint als "Gesponsert"-Anzeige in der Suche
 // blockedDates: vom DJ manuell blockierte Tage (ISO-Format), siehe Kalenderfunktion
 const djs = [
-  { id: 1, name: "DJ Nova", genre: "Techno", genres: ["Techno", "House"], price: 120, rating: 4.8, city: "Berlin",
+  { id: 1, name: "DJ Nova", genre: "Techno", genres: ["Techno", "House"], price: 120, rating: 4.8, city: "Voltstadt",
     color: "linear-gradient(135deg,#ff2ee6,#8a3ffc)", available: true, isPro: false, sponsored: false,
     blockedDates: ["2026-07-10", "2026-07-11", "2026-07-25"], avatarEmoji: null, illustration: 1,
-    bio: "DJ Nova bringt seit über 8 Jahren Clubs in Berlin und ganz Europa zum Beben. Bekannt für treibende Techno-Sets mit hypnotischen Synth-Layern.",
+    bio: "DJ Nova bringt seit über 8 Jahren Clubs in Voltstadt und ganz Europa zum Beben. Bekannt für treibende Techno-Sets mit hypnotischen Synth-Layern.",
     followers: 12400,
     mixes: [{title:"Warehouse Session Vol. 4", duration:"58 Min"}, {title:"Midnight Drive", duration:"42 Min"}],
     reviews: [
@@ -1720,7 +1736,7 @@ const djs = [
       { name: "Mia S.", stars: 4, comment: "Super Stimmung, nur die Lautstärke am Anfang etwas hoch.", date: "2026-03-20" },
       { name: "Jonas P.", stars: 5, comment: "Absolute Empfehlung für jede Techno-Party!", date: "2026-02-11" },
     ] },
-  { id: 2, name: "Luna Beats", genre: "House", genres: ["House", "Deep House"], price: 95, rating: 4.6, city: "Hamburg",
+  { id: 2, name: "Luna Beats", genre: "House", genres: ["House", "Deep House"], price: 95, rating: 4.6, city: "Bassbucht",
     color: "linear-gradient(135deg,#2ef2ff,#8a3ffc)", available: true, isPro: false, sponsored: false,
     blockedDates: ["2026-07-15"], avatarEmoji: null, illustration: 2,
     bio: "Luna Beats steht für warme House-Grooves und sonnige Rooftop-Vibes. Ihre Sets sind der perfekte Soundtrack für laue Sommernächte.",
@@ -1731,7 +1747,7 @@ const djs = [
       { name: "Paul H.", stars: 4, comment: "Sehr freundlich und flexibel bei Musikwünschen.", date: "2026-05-09" },
       { name: "Sofia D.", stars: 5, comment: "House-Sound genau nach unserem Geschmack, kommt wieder!", date: "2026-03-28" },
     ] },
-  { id: 3, name: "MC Solstice", genre: "Hip-Hop", genres: ["Hip-Hop", "Rap"], price: 110, rating: 4.9, city: "München",
+  { id: 3, name: "MC Solstice", genre: "Hip-Hop", genres: ["Hip-Hop", "Rap"], price: 110, rating: 4.9, city: "Bassbucht",
     color: "linear-gradient(135deg,#ffb020,#ff2ee6)", available: false, isPro: false, sponsored: false,
     blockedDates: [], avatarEmoji: null, illustration: 3,
     bio: "MC Solstice verbindet Old-School-Hip-Hop mit aktuellen Rap-Hits und bringt garantiert jede Crowd zum Mitsingen.",
@@ -1743,7 +1759,7 @@ const djs = [
       { name: "Erik B.", stars: 4, comment: "Top Show, kleine Verzögerung beim Aufbau.", date: "2026-04-15" },
       { name: "Julia N.", stars: 5, comment: "Absolut professionell und super Energie!", date: "2026-03-02" },
     ] },
-  { id: 4, name: "Electra Vibe", genre: "EDM", genres: ["EDM", "Electro"], price: 140, rating: 4.7, city: "Köln",
+  { id: 4, name: "Electra Vibe", genre: "EDM", genres: ["EDM", "Electro"], price: 140, rating: 4.7, city: "Voltstadt",
     color: "linear-gradient(135deg,#8a3ffc,#2ef2ff)", available: true, isPro: false, sponsored: true,
     blockedDates: [], avatarEmoji: null, illustration: 4,
     bio: "Electra Vibe liefert bombastische EDM-Drops und energiegeladene Bühnenshows für Festivals und große Clubnächte.",
@@ -1754,7 +1770,7 @@ const djs = [
       { name: "Anna L.", stars: 4, comment: "Sehr energiegeladen, aber Musikrichtung etwas laut für unser Fest.", date: "2026-04-22" },
       { name: "Tobi W.", stars: 5, comment: "Genau die Festival-Atmosphäre, die wir wollten!", date: "2026-02-27" },
     ] },
-  { id: 5, name: "DJ Kalypso", genre: "Latin", genres: ["Latin", "Reggaeton"], price: 90, rating: 4.5, city: "Frankfurt",
+  { id: 5, name: "DJ Kalypso", genre: "Latin", genres: ["Latin", "Reggaeton"], price: 90, rating: 4.5, city: "Bassbucht",
     color: "linear-gradient(135deg,#33e6a0,#2ef2ff)", available: true, isPro: false, sponsored: true,
     blockedDates: [], avatarEmoji: null, illustration: 5,
     bio: "DJ Kalypso bringt karibisches Flair nach Deutschland – Reggaeton, Latin-Pop und Salsa für die perfekte Tanzfläche.",
@@ -1765,7 +1781,7 @@ const djs = [
       { name: "Laura T.", stars: 4, comment: "Tolle Stimmung, gerne etwas mehr Salsa-Klassiker.", date: "2026-04-08" },
       { name: "Marco Z.", stars: 5, comment: "Reggaeton-Auswahl war perfekt für unsere Fiesta.", date: "2026-02-14" },
     ] },
-  { id: 6, name: "Nightshade", genre: "Dark Techno", genres: ["Techno", "Industrial"], price: 130, rating: 4.9, city: "Berlin",
+  { id: 6, name: "Nightshade", genre: "Dark Techno", genres: ["Techno", "Industrial"], price: 130, rating: 4.9, city: "Voltstadt",
     color: "linear-gradient(135deg,#6f6484,#ff2ee6)", available: false, isPro: false, sponsored: false,
     blockedDates: [], avatarEmoji: null, illustration: 6,
     bio: "Nightshade steht für rohe, düstere Techno-Sounds und intensive Warehouse-Atmosphäre. Nichts für schwache Nerven.",
@@ -1992,24 +2008,24 @@ const STORY_EMOJIS = ["🎧", "🔥", "🎉", "🌙", "⚡", "🕺", "💃", "�
 // photoGradients: Gradient-Platzhalter, solange keine echten Fotos existieren ·
 // blockedDates: vom Besitzer blockierte Tage · reviews: Bewertungen (wie bei DJs)
 let privateLocations = [
-  { id: 1, name: "Dachterrasse Mitte", owner: "Jonas W.", address: "Torstraße 12, Berlin", capacity: 40,
+  { id: 1, name: "Dachterrasse Mitte", owner: "Jonas W.", address: "Torstraße 12, Voltstadt", capacity: 40,
     description: "Große Dachterrasse mit Blick über die Stadt, ideal für Sommerpartys.",
     amenities: ["Soundanlage", "Dachterrasse"], x: 58, y: 42, isMine: false, hostOwned: false,
     pricePerNight: 250, photos: [], photoGradients: ["linear-gradient(135deg,#ff2ee6,#8a3ffc)", "linear-gradient(135deg,#2ef2ff,#8a3ffc)"],
     blockedDates: [], reviews: [
       { name: "Lea F.", stars: 5, comment: "Traumhafter Blick, super Gastgeber!", date: "2026-06-12" },
     ] },
-  { id: 2, name: "Gartenparty Villa Süd", owner: "Nina K.", address: "Blumenweg 5, Hamburg", capacity: 80,
+  { id: 2, name: "Gartenparty Villa Süd", owner: "Nina K.", address: "Blumenweg 5, Bassbucht", capacity: 80,
     description: "Große Gartenanlage mit Pool, perfekt für größere Feiern.",
     amenities: ["Garten", "Parkplätze", "Pool"], x: 72, y: 30, isMine: false, hostOwned: false,
     pricePerNight: 400, photos: [], photoGradients: ["linear-gradient(135deg,#33e6a0,#2ef2ff)", "linear-gradient(135deg,#ffb020,#33e6a0)"],
     blockedDates: [], reviews: [] },
-  { id: 3, name: "Loft Kreuzberg", owner: "Max T.", address: "Skalitzer Str. 88, Berlin", capacity: 25,
+  { id: 3, name: "Loft Ostkai", owner: "Max T.", address: "Kaistraße 88, Bassbucht", capacity: 25,
     description: "Industrial-Loft mit eigener Bühne und Lichtanlage.",
     amenities: ["Soundanlage", "Bühne"], x: 38, y: 55, isMine: false, hostOwned: false,
     pricePerNight: 180, photos: [], photoGradients: ["linear-gradient(135deg,#6f6484,#ff2ee6)"],
     blockedDates: [], reviews: [] },
-  { id: 4, name: "Skybar Mitte", owner: "Marlene K.", address: "Rosenthaler Str. 40, Berlin", capacity: 60,
+  { id: 4, name: "Skybar Mitte", owner: "Marlene K.", address: "Rosenthaler Str. 40, Voltstadt", capacity: 60,
     description: "Stylische Rooftop-Bar mit Skyline-Blick, Bühne und hauseigener Anlage – buchbar für private Partys und DJ-Events.",
     amenities: ["Soundanlage", "Dachterrasse", "Bühne"], x: 52, y: 26, isMine: false, hostOwned: true,
     pricePerNight: 450, photos: [], photoGradients: ["linear-gradient(135deg,#8a3ffc,#2ef2ff)", "linear-gradient(135deg,#ff2ee6,#8a3ffc)", "linear-gradient(135deg,#ffb020,#ff2ee6)"],
@@ -2029,12 +2045,12 @@ let locationRequests = [
 // Events für Party-Karte & Events-Tab. date: echtes Datum (Feature D: Gruppierung
 // "Heute / Diese Woche / Später"); dayLabel bleibt als Anzeige-Kürzel erhalten.
 const events = [
-  { id: 1, name: "Neon Nights", location: "Warehouse 9", city: "Berlin", date: "2026-07-02", dayLabel: "Heute", time: "23:00", lineup: ["DJ Nova", "Nightshade"], entry: 15, x: 25, y: 38 },
-  { id: 2, name: "Sunset Sessions", location: "Rooftop Club", city: "Hamburg", date: "2026-07-02", dayLabel: "Heute", time: "22:00", lineup: ["Luna Beats"], entry: 10, x: 68, y: 22 },
-  { id: 3, name: "Beat Explosion", location: "Halle 2", city: "München", date: "2026-07-03", dayLabel: "Morgen", time: "21:30", lineup: ["MC Solstice", "Electra Vibe"], entry: 20, x: 47, y: 62 },
-  { id: 4, name: "Latin Fever", location: "Club Havanna", city: "Frankfurt", date: "2026-07-02", dayLabel: "Heute", time: "23:30", lineup: ["DJ Kalypso"], entry: 12, x: 78, y: 72 },
-  { id: 5, name: "Dark Matter", location: "Bunker Club", city: "Köln", date: "2026-07-04", dayLabel: "Sa", time: "00:00", lineup: ["Nightshade", "Electra Vibe"], entry: 18, x: 14, y: 68 },
-  { id: 6, name: "Deep Garden Rave", location: "Alte Gärtnerei", city: "Berlin", date: "2026-07-11", dayLabel: "Sa", time: "21:00", lineup: ["DJ Nova", "Luna Beats"], entry: 14, x: 33, y: 24 },
+  { id: 1, name: "Neon Nights", location: "Warehouse 9", city: "Voltstadt", date: "2026-07-02", dayLabel: "Heute", time: "23:00", lineup: ["DJ Nova", "Nightshade"], entry: 15, x: 25, y: 38 },
+  { id: 2, name: "Sunset Sessions", location: "Rooftop Club", city: "Bassbucht", date: "2026-07-02", dayLabel: "Heute", time: "22:00", lineup: ["Luna Beats"], entry: 10, x: 68, y: 22 },
+  { id: 3, name: "Beat Explosion", location: "Halle 2", city: "Bassbucht", date: "2026-07-03", dayLabel: "Morgen", time: "21:30", lineup: ["MC Solstice", "Electra Vibe"], entry: 20, x: 47, y: 62 },
+  { id: 4, name: "Latin Fever", location: "Club Havanna", city: "Bassbucht", date: "2026-07-02", dayLabel: "Heute", time: "23:30", lineup: ["DJ Kalypso"], entry: 12, x: 78, y: 56 },
+  { id: 5, name: "Dark Matter", location: "Bunker Club", city: "Voltstadt", date: "2026-07-04", dayLabel: "Sa", time: "00:00", lineup: ["Nightshade", "Electra Vibe"], entry: 18, x: 14, y: 68 },
+  { id: 6, name: "Deep Garden Rave", location: "Alte Gärtnerei", city: "Voltstadt", date: "2026-07-11", dayLabel: "Sa", time: "21:00", lineup: ["DJ Nova", "Luna Beats"], entry: 14, x: 33, y: 24 },
 ];
 
 // Rollenübergreifende Stories (Feature C): Schlüssel sind Entity-Keys statt reiner DJ-IDs.
@@ -2077,9 +2093,9 @@ let hostProfile = {
 
 // Feed-Posts der DJs
 let feedPosts = [
-  { id: 1, djId: 6, text: "Warehouse 9 Berlin, heute Abend – lasst uns die Nacht zum Beben bringen. 🔥", time: "vor 1 Std.", likes: 210, liked: false },
+  { id: 1, djId: 6, text: "Warehouse 9 Voltstadt, heute Abend – lasst uns die Nacht zum Beben bringen. 🔥", time: "vor 1 Std.", likes: 210, liked: false },
   { id: 2, djId: 1, text: "Neues Set ist live! Schaut mal in meinen neuesten Mix „Warehouse Session Vol. 4“ rein. 🎧", time: "vor 2 Std.", likes: 128, liked: false },
-  { id: 3, djId: 2, text: "Nächsten Freitag im Rooftop Club Hamburg – wer ist dabei? ☀️", time: "vor 5 Std.", likes: 89, liked: false },
+  { id: 3, djId: 2, text: "Nächsten Freitag im Rooftop Club Bassbucht – wer ist dabei? ☀️", time: "vor 5 Std.", likes: 89, liked: false },
   { id: 4, djId: 3, text: "Backstage-Vibes vor der Show morgen 🎤", time: "vor 8 Std.", likes: 64, liked: false },
   { id: 5, djId: 4, text: "Neuer Track in Zusammenarbeit mit Nightshade kommt bald! 👀", time: "vor 1 Tag", likes: 150, liked: false },
 ];
@@ -2097,9 +2113,9 @@ let commentsByPost = {
 
 // Eingehende Buchungsanfragen für die DJ-Rolle (Demo-DJ = djs[0], "DJ Nova")
 let bookingRequests = [
-  { id: 1, djId: 1, requester: "Sarah M.", eventType: "Geburtstag", date: "2026-07-12", time: "20:00", duration: 4, genre: "House", location: "Privatwohnung, Berlin", message: "Wir feiern meinen 30. – bitte viel House & Charts!", status: "offen" },
-  { id: 2, djId: 1, requester: "Firma Blitz GmbH", eventType: "Firmenfeier", date: "2026-07-20", time: "18:00", duration: 6, genre: "Techno", location: "Eventhalle Mitte, Berlin", message: "Sommerfest für ca. 150 Mitarbeitende.", status: "bestaetigt" },
-  { id: 3, djId: 1, requester: "Jonas & Lea", eventType: "Hochzeit", date: "2026-08-02", time: "16:00", duration: 5, genre: "House", location: "Schloss Charlottenhof, Potsdam", message: "Standesamtliche Trauung mit anschließender Feier.", status: "abgelehnt" },
+  { id: 1, djId: 1, requester: "Sarah M.", eventType: "Geburtstag", date: "2026-07-12", time: "20:00", duration: 4, genre: "House", location: "Privatwohnung, Voltstadt", message: "Wir feiern meinen 30. – bitte viel House & Charts!", status: "offen" },
+  { id: 2, djId: 1, requester: "Firma Blitz GmbH", eventType: "Firmenfeier", date: "2026-07-20", time: "18:00", duration: 6, genre: "Techno", location: "Eventhalle Mitte, Voltstadt", message: "Sommerfest für ca. 150 Mitarbeitende.", status: "bestaetigt" },
+  { id: 3, djId: 1, requester: "Jonas & Lea", eventType: "Hochzeit", date: "2026-08-02", time: "16:00", duration: 5, genre: "House", location: "Schloss Charlottenhof, Bassbucht", message: "Standesamtliche Trauung mit anschließender Feier.", status: "abgelehnt" },
 ];
 
 const EVENT_TYPES = ["Hochzeit", "Geburtstag", "Firmenfeier", "Club Night", "Private Party", "Festival"];
@@ -2150,6 +2166,7 @@ const state = {
   tasteProfile: null,          // Feature F: { genres:{Genre:Gewicht}, topGenre, trackCount, recognizedCount, source }
   manualGenres: new Set(),     // Feature F: manuelle Genre-Auswahl als Fallback
   feedSkeletonShown: false,    // Feature G: Skeleton-Loader nur beim ersten Feed-Besuch
+  mapCity: "voltstadt",        // v2: aktive Stadtkarte ("voltstadt" | "bassbucht")
   theme: "light",                 // White Mode ist Standard (v2); "dark" bleibt als Toggle
   notificationsEnabled: true,     // rein simulierter Schalter ohne echte Push-Logik
   userDisplayName: "Du",          // Anzeigename der Partygänger-Demo-Persona
@@ -3327,19 +3344,156 @@ function renderMyRequests(){
 }
 
 /* =======================================================================
-   TAB 3: PARTY-KARTE
+   TAB 3: PARTY-KARTE (v2: zwei handgebaute SVG-Stadtkarten)
    ======================================================================= */
 // Formatiert "Ort, Stadt" – bei spontanen Events ist die Stadt oft schon im Ort enthalten
 function formatEventPlace(ev){
   return ev.city ? `${ev.location}, ${ev.city}` : ev.location;
 }
 
+const CITY_NAMES = { voltstadt: "Voltstadt", bassbucht: "Bassbucht" };
+
+// Zwei fiktive Städte als Inline-SVG (offline-fähig, Farben über Map-Design-Tokens,
+// dadurch automatisch White-/Dark-Mode-fähig). preserveAspectRatio="none" streckt die
+// Karte exakt auf den Canvas, sodass die %-Koordinaten der Pins weiterhin passen.
+const CITY_MAPS = {
+  // ⚡ VOLTSTADT: Rasterstadt mit Voltkanal (rechts), Stromgarten & Club-Vierteln
+  voltstadt: `<svg class="city-map" viewBox="0 0 390 300" preserveAspectRatio="none" role="img" aria-label="Stadtkarte Voltstadt">
+    <rect width="390" height="300" fill="var(--map-base)"/>
+    <path d="M328 0 C320 56 336 118 326 178 C319 226 332 268 326 300 L362 300 C368 252 354 202 362 150 C370 98 356 48 364 0 Z" fill="var(--map-water)"/>
+    <text x="358" y="128" font-size="8" fill="var(--map-label)" transform="rotate(86 358 128)">Voltkanal</text>
+    <rect x="18" y="196" width="90" height="76" rx="10" fill="var(--map-park)"/>
+    <text x="34" y="240" font-size="8" fill="var(--map-label)">Stromgarten</text>
+    <rect x="214" y="28" width="64" height="48" rx="8" fill="var(--map-park)"/>
+    <text x="222" y="54" font-size="7.5" fill="var(--map-label)">Ohmpark</text>
+    <g stroke="var(--map-road-casing)" stroke-width="9" fill="none">
+      <path d="M0 96 H390"/><path d="M148 0 V300"/><path d="M0 236 C90 220 210 254 320 226"/>
+    </g>
+    <g stroke="var(--map-road)" stroke-width="6" fill="none">
+      <path d="M0 96 H390"/><path d="M148 0 V300"/><path d="M0 236 C90 220 210 254 320 226"/>
+    </g>
+    <g stroke="var(--map-road)" stroke-width="2.4" fill="none" opacity="0.9">
+      <path d="M0 40 H328"/><path d="M0 160 H328"/><path d="M64 0 V196"/>
+      <path d="M226 0 V236"/><path d="M288 96 V236"/><path d="M64 160 L148 236"/>
+    </g>
+    <g fill="var(--map-block)">
+      <rect x="8" y="8" width="42" height="22" rx="2"/><rect x="76" y="8" width="58" height="22" rx="2"/>
+      <rect x="160" y="8" width="52" height="22" rx="2"/><rect x="240" y="8" width="44" height="20" rx="2"/>
+      <rect x="8" y="50" width="44" height="36" rx="2"/><rect x="76" y="50" width="58" height="36" rx="2"/>
+      <rect x="160" y="50" width="42" height="16" rx="2"/><rect x="160" y="72" width="42" height="14" rx="2"/>
+      <rect x="288" y="50" width="30" height="36" rx="2"/>
+      <rect x="8" y="106" width="42" height="20" rx="2"/><rect x="8" y="132" width="42" height="20" rx="2"/>
+      <rect x="112" y="106" width="26" height="46" rx="2"/><rect x="160" y="106" width="56" height="20" rx="2"/>
+      <rect x="160" y="132" width="56" height="20" rx="2"/><rect x="240" y="106" width="38" height="46" rx="2"/>
+      <rect x="298" y="106" width="20" height="46" rx="2"/>
+      <rect x="8" y="168" width="46" height="20" rx="2"/><rect x="86" y="170" width="50" height="18" rx="2"/>
+      <rect x="160" y="168" width="56" height="22" rx="2"/><rect x="240" y="168" width="38" height="22" rx="2"/>
+      <rect x="298" y="164" width="20" height="30" rx="2"/>
+      <rect x="122" y="248" width="18" height="24" rx="2"/><rect x="160" y="252" width="56" height="24" rx="2"/>
+      <rect x="240" y="248" width="38" height="26" rx="2"/><rect x="298" y="244" width="20" height="30" rx="2"/>
+    </g>
+    <g fill="var(--map-block2)">
+      <rect x="56" y="106" width="40" height="20" rx="2"/><rect x="56" y="50" width="12" height="36" rx="2"/>
+      <rect x="118" y="8" width="22" height="22" rx="2"/><rect x="222" y="168" width="12" height="22" rx="2"/>
+    </g>
+    <g>
+      <rect x="88" y="132" width="18" height="14" rx="2" fill="#ff2ee6" opacity="0.85"/>
+      <text x="72" y="128" font-size="7.5" font-weight="600" fill="var(--map-label)">Warehouse 9</text>
+      <rect x="196" y="62" width="16" height="12" rx="2" fill="#8a3ffc" opacity="0.9"/>
+      <text x="196" y="90" font-size="7.5" font-weight="600" fill="var(--map-label)">Skybar</text>
+      <rect x="34" y="200" width="16" height="12" rx="2" fill="#2ef2ff" opacity="0.9"/>
+      <text x="16" y="198" font-size="7.5" font-weight="600" fill="var(--map-label)">Bunker Club</text>
+    </g>
+    <text x="8" y="90" font-size="8" font-weight="600" fill="var(--map-road-label)">Watt-Boulevard</text>
+    <text x="158" y="14" font-size="8" font-weight="600" fill="var(--map-road-label)" transform="rotate(90 158 14)">Neonallee</text>
+    <text x="10" y="230" font-size="8" font-weight="600" fill="var(--map-road-label)">Stromring</text>
+    <text x="8" y="36" font-size="7" fill="var(--map-road-label)">Kabelgasse</text>
+    <text x="232" y="12" font-size="7" fill="var(--map-road-label)" transform="rotate(90 232 12)">Synthweg</text>
+    <text x="230" y="156" font-size="7" fill="var(--map-road-label)">Bassstraße</text>
+  </svg>`,
+
+  // 🌊 BASSBUCHT: Küstenstadt mit Bucht (unten), Strand, Pier & Dünenpark
+  bassbucht: `<svg class="city-map" viewBox="0 0 390 300" preserveAspectRatio="none" role="img" aria-label="Stadtkarte Bassbucht">
+    <rect width="390" height="300" fill="var(--map-base)"/>
+    <path d="M0 224 C70 212 140 200 200 206 C270 212 330 198 390 208 L390 240 L0 240 Z" fill="var(--map-sand)"/>
+    <path d="M0 238 C70 226 140 214 200 220 C270 226 330 212 390 222 L390 300 L0 300 Z" fill="var(--map-water)"/>
+    <text x="150" y="276" font-size="9" fill="var(--map-label)" opacity="0.9">Bassbucht</text>
+    <g stroke="var(--map-label)" stroke-width="1" opacity="0.45"><path d="M40 258 q8 -3 16 0"/><path d="M120 268 q8 -3 16 0"/><path d="M250 262 q8 -3 16 0"/><path d="M330 252 q8 -3 16 0"/></g>
+    <rect x="206" y="214" width="9" height="52" rx="2" fill="var(--map-road)" stroke="var(--map-road-casing)" stroke-width="1.5"/>
+    <text x="220" y="252" font-size="7" fill="var(--map-label)">Pier 3</text>
+    <rect x="296" y="16" width="76" height="64" rx="10" fill="var(--map-park)"/>
+    <text x="310" y="50" font-size="8" fill="var(--map-label)">Dünenpark</text>
+    <g stroke="var(--map-road-casing)" stroke-width="9" fill="none">
+      <path d="M0 210 C70 198 140 186 200 192 C270 198 330 184 390 194"/>
+      <path d="M120 0 V196"/><path d="M0 80 H390"/>
+    </g>
+    <g stroke="var(--map-road)" stroke-width="6" fill="none">
+      <path d="M0 210 C70 198 140 186 200 192 C270 198 330 184 390 194"/>
+      <path d="M120 0 V196"/><path d="M0 80 H390"/>
+    </g>
+    <g stroke="var(--map-road)" stroke-width="2.4" fill="none" opacity="0.9">
+      <path d="M0 30 H390"/><path d="M0 140 C80 132 200 150 390 136"/>
+      <path d="M50 0 V204"/><path d="M212 0 V190"/><path d="M280 0 V186"/>
+      <path d="M120 140 C160 160 190 176 212 190"/>
+    </g>
+    <g fill="var(--map-block)">
+      <rect x="6" y="6" width="36" height="18" rx="2"/><rect x="58" y="6" width="54" height="18" rx="2"/>
+      <rect x="128" y="6" width="76" height="18" rx="2"/><rect x="220" y="6" width="52" height="18" rx="2"/>
+      <rect x="6" y="38" width="36" height="34" rx="2"/><rect x="58" y="38" width="54" height="34" rx="2"/>
+      <rect x="128" y="38" width="42" height="34" rx="2"/><rect x="220" y="38" width="52" height="15" rx="2"/>
+      <rect x="220" y="58" width="52" height="14" rx="2"/>
+      <rect x="6" y="88" width="36" height="44" rx="2"/><rect x="58" y="88" width="54" height="20" rx="2"/>
+      <rect x="128" y="88" width="76" height="20" rx="2"/><rect x="220" y="88" width="52" height="44" rx="2"/>
+      <rect x="288" y="88" width="42" height="44" rx="2"/><rect x="340" y="88" width="40" height="44" rx="2"/>
+      <rect x="6" y="148" width="36" height="48" rx="2"/><rect x="58" y="148" width="46" height="34" rx="2"/>
+      <rect x="288" y="144" width="42" height="34" rx="2"/><rect x="340" y="142" width="40" height="34" rx="2"/>
+    </g>
+    <g fill="var(--map-block2)">
+      <rect x="176" y="38" width="28" height="34" rx="2"/><rect x="58" y="114" width="54" height="18" rx="2"/>
+      <rect x="128" y="114" width="40" height="18" rx="2"/>
+    </g>
+    <g>
+      <rect x="258" y="56" width="17" height="13" rx="2" fill="#ff2ee6" opacity="0.9"/>
+      <text x="236" y="52" font-size="7.5" font-weight="600" fill="var(--map-label)">Rooftop Club</text>
+      <rect x="176" y="176" width="16" height="12" rx="2" fill="#8a3ffc" opacity="0.9"/>
+      <text x="128" y="170" font-size="7.5" font-weight="600" fill="var(--map-label)">Halle 2</text>
+      <rect x="298" y="162" width="17" height="12" rx="2" fill="#2ef2ff" opacity="0.9"/>
+      <text x="278" y="190" font-size="7.5" font-weight="600" fill="var(--map-label)">Club Havanna</text>
+    </g>
+    <text x="8" y="206" font-size="8" font-weight="600" fill="var(--map-road-label)" transform="rotate(-8 8 206)">Hafenpromenade</text>
+    <text x="126" y="12" font-size="8" font-weight="600" fill="var(--map-road-label)" transform="rotate(90 126 12)">Wellenstraße</text>
+    <text x="8" y="74" font-size="8" font-weight="600" fill="var(--map-road-label)">Subwoofer-Allee</text>
+    <text x="8" y="26" font-size="7" fill="var(--map-road-label)">Dünenweg</text>
+    <text x="286" y="10" font-size="7" fill="var(--map-road-label)" transform="rotate(90 286 10)">Echogasse</text>
+    <text x="230" y="134" font-size="7" fill="var(--map-road-label)">Kaimauer</text>
+  </svg>`,
+};
+
+// Stadt-Zuordnung: explizites mapCity-Feld oder Ableitung aus Stadt/Adresse
+function eventMapCity(ev){
+  if(ev.mapCity) return ev.mapCity;
+  return String(ev.city || ev.location || "").includes("Bassbucht") ? "bassbucht" : "voltstadt";
+}
+function locationMapCity(loc){
+  if(loc.mapCity) return loc.mapCity;
+  return String(loc.address || "").includes("Bassbucht") ? "bassbucht" : "voltstadt";
+}
+
+function setMapCity(city){
+  state.mapCity = city;
+  document.getElementById("city-btn-voltstadt").classList.toggle("active", city === "voltstadt");
+  document.getElementById("city-btn-bassbucht").classList.toggle("active", city === "bassbucht");
+  renderMap();
+  renderTonightList();
+}
+
 function renderMap(){
   const canvas = document.getElementById("map-canvas");
-  canvas.innerHTML = "";
+  canvas.innerHTML = CITY_MAPS[state.mapCity]; // SVG-Basis der gewählten Stadt
   const selfDjName = getDj(state.loggedInDjId).name;
 
-  events.forEach(ev => {
+  // Event-Pins der gewählten Stadt (bestehende Interaktion bleibt erhalten)
+  events.filter(ev => eventMapCity(ev) === state.mapCity).forEach(ev => {
     const isMine = ev.lineup.includes(selfDjName);
     const pin = document.createElement("div");
     pin.className = "map-pin" + (isMine ? " mine" : "") + (ev.spontaneous ? " spontaneous" : "");
@@ -3351,7 +3505,7 @@ function renderMap(){
   });
 
   // Pins für angebotene private Locations (eigener Stil, siehe .map-pin.private)
-  privateLocations.forEach(loc => {
+  privateLocations.filter(loc => locationMapCity(loc) === state.mapCity).forEach(loc => {
     const pin = document.createElement("div");
     pin.className = "map-pin private";
     pin.style.left = loc.x + "%";
@@ -3364,7 +3518,8 @@ function renderMap(){
 
 function renderTonightList(){
   const container = document.getElementById("tonight-list");
-  const tonight = events.filter(e => e.dayLabel === "Heute");
+  // v2: nur Events der aktuell gewählten Stadtkarte ("in deiner Nähe")
+  const tonight = events.filter(e => e.dayLabel === "Heute" && eventMapCity(e) === state.mapCity);
   container.innerHTML = "";
   tonight.forEach(ev => {
     const el = document.createElement("div");
@@ -4378,6 +4533,7 @@ function submitSpontaneousEvent(){
     description,
     x: 15 + Math.random() * 65,
     y: 18 + Math.random() * 58,
+    mapCity: state.mapCity, // v2: Pin erscheint auf der aktuell gewählten Stadtkarte
     spontaneous: true,
   };
   events.push(newEvent);
@@ -4573,6 +4729,7 @@ function submitPrivateLocation(){
     reviews: [],
     x: 15 + Math.random() * 65,
     y: 18 + Math.random() * 58,
+    mapCity: state.mapCity, // v2: Pin erscheint auf der aktuell gewählten Stadtkarte
     isMine: !asHost,
     hostOwned: asHost,
   });
