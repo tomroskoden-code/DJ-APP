@@ -1036,6 +1036,40 @@
   .card-media > svg{ position:absolute; inset:0; width:100%; height:100%; }
   .avatar-gallery .avatar-option.illustrated{ overflow:hidden; padding:0; }
   .avatar-gallery .avatar-option.illustrated svg{ width:100%; height:100%; display:block; }
+
+  /* ===================== v2: Chats-Tab ===================== */
+  .chat-list-item{
+    display:flex; align-items:center; gap:12px;
+    background: var(--bg-card); border:1px solid var(--border-subtle);
+    border-radius: var(--radius-lg); padding:12px; margin-bottom:10px;
+    box-shadow: var(--shadow-card); cursor:pointer;
+  }
+  .chat-list-item:active{ transform: scale(0.98); background: var(--bg-card-hover); }
+  .chat-list-item .avatar{ width:48px; height:48px; font-size:15px; flex:0 0 auto; }
+  .cl-main{ flex:1; min-width:0; }
+  .cl-top{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .cl-name{ font-weight:700; font-size:14px; display:flex; align-items:center; gap:6px; min-width:0; }
+  .cl-time{ font-size:10.5px; color: var(--text-muted); flex:0 0 auto; }
+  .cl-preview{
+    font-size:12.5px; color: var(--text-secondary); margin-top:3px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .cl-unread{
+    flex:0 0 auto; min-width:20px; height:20px; border-radius:10px; padding:0 6px;
+    background: linear-gradient(90deg, var(--neon-magenta), var(--neon-violet));
+    color:#fff; font-size:11px; font-weight:800;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 0 10px rgba(255,46,230,0.45);
+  }
+  /* "tippt…"-Indikator im Chat */
+  .chat-bubble.typing{ display:flex; gap:4px; align-items:center; min-width:46px; }
+  .chat-bubble.typing span{
+    width:7px; height:7px; border-radius:50%; background: var(--text-muted);
+    animation: typingBlink 1.2s infinite;
+  }
+  .chat-bubble.typing span:nth-child(2){ animation-delay:.2s; }
+  .chat-bubble.typing span:nth-child(3){ animation-delay:.4s; }
+  @keyframes typingBlink{ 0%,80%,100%{ opacity:0.25; transform:translateY(0); } 40%{ opacity:1; transform:translateY(-2.5px); } }
 </style>
 </head>
 <body>
@@ -1256,6 +1290,16 @@
       <div class="section-title" style="margin-top:2px;">Deine Events</div>
       <p class="subtle-text" style="margin-top:-4px; margin-bottom:14px;">Kommende Events von DJs, denen du folgst – plus alles, was du dir gemerkt hast.</p>
       <div id="events-tab-list"></div>
+    </section>
+
+    <!-- TAB 5: Chats (v2, alle Rollen) -->
+    <section class="tab-content" id="tab-5">
+      <div class="section-title" style="margin-top:2px;">Chats</div>
+      <div class="search-bar" style="margin-bottom:14px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="chat-search-input" placeholder="Chats durchsuchen…" oninput="renderChatsTab()">
+      </div>
+      <div id="chats-tab-body"></div>
     </section>
 
     <!-- TAB 3: Party-Karte (für alle Rollen gleich) -->
@@ -1684,6 +1728,11 @@
       <span class="nav-badge" id="nav-badge-4"></span>
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       <span>Events</span>
+    </button>
+    <button class="nav-btn" id="nav-btn-5" onclick="switchTab(5)">
+      <span class="nav-badge" id="nav-badge-5"></span>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>Chats</span>
     </button>
     <button class="nav-btn" id="nav-btn-3" onclick="switchTab(3)">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.447-2.724A1 1 0 0 1 3 16.382V5.618a1 1 0 0 1 1.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0 0 21 18.382V7.618a1 1 0 0 0-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
@@ -2137,6 +2186,69 @@ const AUTO_REPLIES = [
   "Kein Problem, das lässt sich einrichten.",
 ];
 
+/* ---- v2: Direktchats (Chats-Tab) ---- */
+// Antwort-Pool für simulierte DJ-Antworten in Direktchats
+const DIRECT_DJ_REPLIES = [
+  "Klingt gut! Schick mir gern noch Datum und Uhrzeit. 🎧",
+  "Bin dabei – ich checke kurz meinen Kalender und melde mich.",
+  "Dafür hätte ich noch Kapazität. Was ist euer Budget?",
+  "Cool! Welche Musikrichtung schwebt euch vor?",
+  "Ich schicke dir heute Abend ein Angebot rüber. 🙌",
+  "Top, den Termin reserviere ich dir erstmal unverbindlich.",
+];
+
+// Vorbefüllte, realistische Booking-Konversationen (Schlüssel = DJ-ID)
+const DIRECT_CHAT_SEEDS = {
+  1: [
+    { sender: "user", text: "Hey Nova! Bist du am 24.07. noch frei für eine Rooftop-Party?", time: "Di, 18:22" },
+    { sender: "dj", text: "Hey! Ja, der 24. ist noch frei. Wie viele Gäste erwartet ihr?", time: "Di, 18:40" },
+    { sender: "user", text: "Ca. 60 Leute, Start 21 Uhr. Was würdest du für 4 Stunden nehmen?", time: "Di, 19:03" },
+    { sender: "dj", text: "480 € für 4 Std. inkl. Anlage – Licht bringe ich auch mit. 🎧", time: "Di, 19:15" },
+  ],
+  2: [
+    { sender: "user", text: "Hi Luna! Deine Rooftop-Sets sind großartig. Machst du auch private Feiern?", time: "Mo, 12:10" },
+    { sender: "dj", text: "Danke dir! 🧡 Klar, sehr gern – ab 30 Gästen lohnt sich das richtig.", time: "Mo, 12:35" },
+    { sender: "dj", text: "Schick mir einfach Datum + Location, dann checke ich meinen Kalender. ☀️", time: "Mo, 12:36" },
+  ],
+  4: [
+    { sender: "user", text: "Hi Electra! Wir planen ein Sommerfest mit ca. 150 Leuten. Interesse?", time: "Sa, 16:02" },
+    { sender: "dj", text: "Klingt super! Ab 100 Gästen bringe ich die große Anlage mit.", time: "Sa, 16:30" },
+    { sender: "user", text: "Perfekt. Was kostet das Gesamtpaket für 5 Stunden?", time: "Sa, 17:11" },
+    { sender: "dj", text: "700 € inkl. Auf- und Abbau. Den Termin halte ich dir bis Freitag frei. 🎆", time: "Sa, 17:26" },
+    { sender: "dj", text: "Sag einfach Bescheid, dann mache ich die Zusage fix!", time: "So, 10:05" },
+  ],
+};
+// Ungelesen-Zähler der Seeds (letzte Nachricht(en) kamen vom DJ)
+const DIRECT_UNREAD_SEEDS = { 2: 2, 4: 1 };
+
+let directChats = {};   // djId -> Nachrichtenliste
+let directUnread = {};  // djId -> Anzahl ungelesener Nachrichten
+const DIRECT_CHAT_STORAGE_KEY = "beatspot-direct-chats-v1";
+
+// Persistenz: neue Nachrichten & Chats überleben ein Neuladen (localStorage).
+// Gespeichert wird NUR der Chat-Bereich – alles andere bleibt bewusst flüchtig.
+function loadDirectChats(){
+  try {
+    const raw = localStorage.getItem(DIRECT_CHAT_STORAGE_KEY);
+    if(raw){
+      const data = JSON.parse(raw);
+      if(data && data.chats){
+        directChats = data.chats;
+        directUnread = data.unread || {};
+        return;
+      }
+    }
+  } catch(e){ /* defekter/blockierter Speicher → unten auf Seeds zurückfallen */ }
+  directChats = JSON.parse(JSON.stringify(DIRECT_CHAT_SEEDS));
+  directUnread = { ...DIRECT_UNREAD_SEEDS };
+}
+
+function saveDirectChats(){
+  try {
+    localStorage.setItem(DIRECT_CHAT_STORAGE_KEY, JSON.stringify({ chats: directChats, unread: directUnread }));
+  } catch(e){ /* Speicher voll o.ä. – im Prototyp ohne Folgen */ }
+}
+
 /* =======================================================================
    APPLIKATIONS-STATUS
    ======================================================================= */
@@ -2304,6 +2416,7 @@ function init(){
     if(Math.abs(dx) > 50){ dx < 0 ? storyNext() : storyPrev(); }
   });
 
+  loadDirectChats(); // v2: persistierte Direktchats vor dem ersten Rendern laden
   renderDjList();
   renderFollowScroll();
   renderFeed();
@@ -2384,6 +2497,9 @@ function switchTab(n){
     if(n === 2 && state.role === "user") showFeedSkeleton(); // einmalige Lade-Simulation
   } else if(n === 3){
     document.getElementById("tab-3").classList.add("active");
+  } else if(n === 5){
+    document.getElementById("tab-5").classList.add("active");
+    renderChatsTab();
   } else {
     document.getElementById("tab-4").classList.add("active");
     renderEventsTab();
@@ -4377,7 +4493,11 @@ function openChat(requestId, kind){
   const banner = document.getElementById("chat-location-banner");
 
   let partnerName;
-  if(kind === "booking"){
+  if(kind === "direct"){
+    // v2: Direktchat mit einem DJ (Chats-Tab), unabhängig von Anfragen
+    partnerName = getDj(requestId).name;
+    banner.style.display = "none";
+  } else if(kind === "booking"){
     const req = bookingRequests.find(r => r.id === requestId);
     const dj = getDj(req.djId);
     partnerName = state.role === "dj" ? displayName(req.requester) : dj.name;
@@ -4399,11 +4519,22 @@ function openChat(requestId, kind){
   }
 
   document.getElementById("chat-title").textContent = "Chat mit " + partnerName;
-  const key = chatKeyFor(kind, requestId);
-  if(!chatMessages[key]) chatMessages[key] = [];
   renderChatMessages();
   document.getElementById("chat-input").value = "";
   openOverlay("overlay-chat");
+}
+
+// Liefert die Nachrichtenliste des aktiven Chats (Direktchats liegen in directChats,
+// Anfrage-Chats wie bisher in chatMessages)
+function activeChatMessages(){
+  const { kind, id } = state.activeChat;
+  if(kind === "direct"){
+    if(!directChats[id]) directChats[id] = [];
+    return directChats[id];
+  }
+  const key = chatKeyFor(kind, id);
+  if(!chatMessages[key]) chatMessages[key] = [];
+  return chatMessages[key];
 }
 
 // Avatar des Nachrichten-Absenders (sender = Rolle: "user" | "dj" | "host")
@@ -4413,8 +4544,10 @@ function chatSenderAvatarHTML(m){
   const locationReq = kind === "location" ? locationRequests.find(r => r.id === id) : null;
 
   if(m.sender === "dj"){
-    // Buchung: der angefragte DJ · Location-Anfrage: der anfragende DJ
-    const dj = bookingReq ? getDj(bookingReq.djId) : djs.find(d => locationReq && d.name === locationReq.requester);
+    // Direktchat: der Chat-Partner · Buchung: der angefragte DJ · Location-Anfrage: der anfragende DJ
+    const dj = kind === "direct" ? getDj(id)
+      : bookingReq ? getDj(bookingReq.djId)
+      : djs.find(d => locationReq && d.name === locationReq.requester);
     if(dj) return `<div class="avatar round" style="background:${avatarBg(dj)};">${avatarInnerHTML(dj)}</div>`;
   }
   if(m.sender === "host"){
@@ -4433,9 +4566,8 @@ function chatSenderAvatarHTML(m){
 }
 
 function renderChatMessages(){
-  const { kind, id } = state.activeChat;
   const container = document.getElementById("chat-messages");
-  const msgs = chatMessages[chatKeyFor(kind, id)] || [];
+  const msgs = activeChatMessages();
   container.innerHTML = "";
 
   if(msgs.length === 0){
@@ -4457,30 +4589,63 @@ function sendChatMessage(){
   if(!text) return;
 
   const { kind, id } = state.activeChat;
-  const key = chatKeyFor(kind, id);
-  if(!chatMessages[key]) chatMessages[key] = [];
-  chatMessages[key].push({ sender: state.role, text, time: "gerade eben" });
+  activeChatMessages().push({ sender: state.role, text, time: "gerade eben" });
   input.value = "";
   renderChatMessages();
+  if(kind === "direct"){ saveDirectChats(); renderChatsTab(); }
 
-  // Simulierte Antwort der Gegenseite nach kurzer Verzögerung, damit der Chat lebendig wirkt
+  // Simulierte Antwort der Gegenseite: erst "tippt…"-Indikator, dann nach
+  // realistischer Verzögerung (1,2–3 s) eine passende Antwort aus dem Pool
   let replySender;
   if(kind === "location"){
     const req = locationRequests.find(r => r.id === id);
     replySender = state.role === "host" ? (req.requesterRole || "user") : "host";
+  } else if(kind === "direct"){
+    replySender = "dj";
   } else {
     replySender = state.role === "user" ? "dj" : "user";
   }
+  const pool = kind === "direct" ? DIRECT_DJ_REPLIES : AUTO_REPLIES;
+  const isSameChatOpen = () => state.activeChat.id === id && state.activeChat.kind === kind
+    && document.getElementById("overlay-chat").classList.contains("open");
+
+  setTimeout(() => { if(isSameChatOpen()) showTypingIndicator(replySender); }, 450);
   setTimeout(() => {
-    chatMessages[key].push({
-      sender: replySender,
-      text: AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)],
-      time: "gerade eben",
-    });
-    if(state.activeChat.id === id && state.activeChat.kind === kind && document.getElementById("overlay-chat").classList.contains("open")){
-      renderChatMessages();
+    removeTypingIndicator();
+    const msgs = kind === "direct" ? (directChats[id] = directChats[id] || []) : activeChatMessagesFor(kind, id);
+    msgs.push({ sender: replySender, text: pool[Math.floor(Math.random() * pool.length)], time: "gerade eben" });
+    if(kind === "direct"){
+      // Antwort kam an, während der Chat evtl. geschlossen ist → Ungelesen-Zähler
+      if(!isSameChatOpen()) directUnread[id] = Number(directUnread[id] || 0) + 1;
+      saveDirectChats();
+      renderChatsTab();
+      updateNavBadges();
     }
-  }, 1400);
+    if(isSameChatOpen()) renderChatMessages();
+  }, 1200 + Math.random() * 1800);
+}
+
+// Nachrichtenliste eines beliebigen (nicht zwingend aktiven) Anfrage-Chats
+function activeChatMessagesFor(kind, id){
+  const key = chatKeyFor(kind, id);
+  if(!chatMessages[key]) chatMessages[key] = [];
+  return chatMessages[key];
+}
+
+/* ---- v2: "tippt…"-Indikator ---- */
+function showTypingIndicator(sender){
+  removeTypingIndicator();
+  const container = document.getElementById("chat-messages");
+  const row = document.createElement("div");
+  row.className = "chat-row theirs";
+  row.id = "typing-indicator";
+  row.innerHTML = `${chatSenderAvatarHTML({ sender })}<div class="chat-bubble typing"><span></span><span></span><span></span></div>`;
+  container.appendChild(row);
+  container.scrollTop = container.scrollHeight;
+}
+function removeTypingIndicator(){
+  const el = document.getElementById("typing-indicator");
+  if(el) el.remove();
 }
 
 /* =======================================================================
@@ -5051,6 +5216,7 @@ function updateLocationRequestStatus(id, status){
   renderHostDashboard();
   renderMyRequests();
   renderDjSentLocationRequests();
+  renderChatsTab();
   updateNavBadges();
   showToast(status === "bestaetigt" ? "Anfrage bestätigt ✓" : "Anfrage abgelehnt");
 }
@@ -5544,15 +5710,19 @@ function updateNavBadges(){
     setBadge(1, 0);
     setBadge(2, unseenStories);
     setBadge(4, state.newEventIds.size);
+    // v2: Chats-Badge = Summe ungelesener Direktnachrichten
+    setBadge(5, Object.values(directUnread).reduce((sum, n) => sum + Number(n || 0), 0));
   } else if(state.role === "dj"){
     setBadge(1, bookingRequests.filter(r => r.djId === state.loggedInDjId && r.status === "offen").length);
     setBadge(2, 0);
     setBadge(4, 0);
+    setBadge(5, 0);
   } else {
     const ownIds = privateLocations.filter(l => l.hostOwned).map(l => l.id);
     setBadge(1, locationRequests.filter(r => ownIds.includes(r.locationId) && r.status === "offen").length);
     setBadge(2, 0);
     setBadge(4, 0);
+    setBadge(5, 0);
   }
 }
 
@@ -5602,6 +5772,166 @@ function setupPullToRefresh(){
       renderFeed();
       showToast("Feed aktualisiert ✓");
     }, 700);
+  });
+}
+
+/* =======================================================================
+   v2: CHATS-TAB (alle Rollen)
+   Partygänger: Direktchats mit gefolgten DJs (localStorage-persistent).
+   DJ/Gastgeberin: die bestehenden Anfrage-Chats als Messenger-Übersicht.
+   ======================================================================= */
+function renderChatsTab(){
+  const body = document.getElementById("chats-tab-body");
+  if(!body) return;
+  const query = (document.getElementById("chat-search-input").value || "").trim().toLowerCase();
+  if(state.role === "user") renderUserChatList(body, query);
+  else renderRequestChatList(body, query);
+}
+
+function renderUserChatList(body, query){
+  body.innerHTML = "";
+
+  // Bestehende Direktchats (neueste Aktivität implizit unten im Verlauf)
+  const chatDjIds = Object.keys(directChats).map(Number)
+    .filter(id => (directChats[id] || []).length > 0 && getDj(id));
+  const visibleChats = chatDjIds.filter(id => !query || getDj(id).name.toLowerCase().includes(query));
+
+  if(visibleChats.length === 0 && !query){
+    body.innerHTML = `<div class="empty-state" style="padding:30px 20px;">
+      <p>Noch keine Chats. Starte unten einen Chat mit einem DJ, dem du folgst.</p>
+    </div>`;
+  }
+  visibleChats.forEach(id => body.appendChild(buildDirectChatListItem(id)));
+
+  // Neuen Chat starten: Suche über die Follow-Logik (nur gefolgte DJs auswählbar)
+  const candidates = [...state.followed].map(getDj)
+    .filter(dj => dj && (directChats[dj.id] || []).length === 0)
+    .filter(dj => !query || dj.name.toLowerCase().includes(query));
+
+  if(candidates.length > 0){
+    const title = document.createElement("div");
+    title.className = "section-title";
+    title.textContent = "Neuen Chat starten";
+    body.appendChild(title);
+    const hint = document.createElement("p");
+    hint.className = "subtle-text";
+    hint.style.margin = "-6px 0 10px";
+    hint.textContent = "DJs, denen du folgst:";
+    body.appendChild(hint);
+
+    candidates.forEach(dj => {
+      const el = document.createElement("div");
+      el.className = "chat-list-item";
+      el.onclick = () => startDirectChat(dj.id);
+      el.innerHTML = `
+        <div class="avatar round">${avatarInnerHTML(dj)}</div>
+        <div class="cl-main">
+          <div class="cl-top"><span class="cl-name">${dj.name}</span></div>
+          <div class="cl-preview">${dj.genres.join(" · ")} · ${dj.city}</div>
+        </div>
+        <span class="price-tag" style="font-size:12px;">Chat →</span>`;
+      body.appendChild(el);
+    });
+  } else if(query && visibleChats.length === 0){
+    body.innerHTML += `<div class="empty-state" style="padding:30px 20px;">
+      <p>Kein Chat und kein gefolgter DJ passt zu „${query}“.</p>
+    </div>`;
+  }
+}
+
+function buildDirectChatListItem(djId){
+  const dj = getDj(djId);
+  const msgs = directChats[djId];
+  const last = msgs[msgs.length - 1];
+  const unread = Number(directUnread[djId] || 0);
+
+  const el = document.createElement("div");
+  el.className = "chat-list-item";
+  el.onclick = () => openDirectChat(djId);
+  el.innerHTML = `
+    <div class="avatar round">${avatarInnerHTML(dj)}</div>
+    <div class="cl-main">
+      <div class="cl-top">
+        <span class="cl-name">${dj.name}${dj.isPro ? ' <span class="badge-pro">PRO</span>' : ""}</span>
+        <span class="cl-time">${last.time}</span>
+      </div>
+      <div class="cl-preview">${last.sender === "user" ? "Du: " : ""}${last.text}</div>
+    </div>
+    ${unread > 0 ? `<span class="cl-unread">${unread}</span>` : ""}`;
+  return el;
+}
+
+// Neuen Direktchat anlegen (nur für gefolgte DJs erreichbar) und öffnen
+function startDirectChat(djId){
+  if(!directChats[djId]) directChats[djId] = [];
+  saveDirectChats();
+  openDirectChat(djId);
+}
+
+function openDirectChat(djId){
+  directUnread[djId] = 0; // Öffnen markiert als gelesen
+  saveDirectChats();
+  renderChatsTab();
+  updateNavBadges();
+  openChat(djId, "direct");
+}
+
+// DJ-/Gastgeber-Rolle: bestehende Anfrage-Chats als Übersicht
+function renderRequestChatList(body, query){
+  body.innerHTML = "";
+  const items = [];
+  const dateShort = d => new Date(d).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+
+  if(state.role === "dj"){
+    const djName = getDj(state.loggedInDjId).name;
+    bookingRequests.filter(r => r.djId === state.loggedInDjId).forEach(r => {
+      items.push({ kind: "booking", id: r.id, name: displayName(r.requester),
+        sub: `${r.eventType} · ${dateShort(r.date)}, ${r.time} Uhr`, status: r.status,
+        avatar: `<div class="avatar round" style="background:${pseudoAvatarColor(displayName(r.requester))};">${initialsFromName(displayName(r.requester))}</div>` });
+    });
+    locationRequests.filter(r => r.requesterRole === "dj" && r.requester === djName).forEach(r => {
+      const loc = privateLocations.find(l => l.id === r.locationId);
+      items.push({ kind: "location", id: r.id, name: displayName(loc.owner),
+        sub: `🏠 ${loc.name} · ${dateShort(r.date)}`, status: r.status,
+        avatar: `<div class="avatar round" style="background:${pseudoAvatarColor(displayName(loc.owner))};">${initialsFromName(displayName(loc.owner))}</div>` });
+    });
+  } else {
+    const ownIds = privateLocations.filter(l => l.hostOwned).map(l => l.id);
+    locationRequests.filter(r => ownIds.includes(r.locationId)).forEach(r => {
+      const loc = privateLocations.find(l => l.id === r.locationId);
+      const requesterDj = r.requesterRole === "dj" ? djs.find(d => d.name === r.requester) : null;
+      items.push({ kind: "location", id: r.id, name: displayName(r.requester),
+        sub: `🏠 ${loc.name} · ${dateShort(r.date)}, ${r.time} Uhr`, status: r.status,
+        avatar: requesterDj
+          ? `<div class="avatar round">${avatarInnerHTML(requesterDj)}</div>`
+          : `<div class="avatar round" style="background:${pseudoAvatarColor(displayName(r.requester))};">${initialsFromName(displayName(r.requester))}</div>` });
+    });
+  }
+
+  const visible = items.filter(it => !query || it.name.toLowerCase().includes(query) || it.sub.toLowerCase().includes(query));
+  if(visible.length === 0){
+    body.innerHTML = `<div class="empty-state" style="padding:30px 20px;">
+      <p>${query ? "Kein Chat passt zu deiner Suche." : "Noch keine Anfragen – hier erscheinen deine Chats zu Anfragen."}</p>
+    </div>`;
+    return;
+  }
+
+  visible.forEach(it => {
+    const msgs = chatMessages[chatKeyFor(it.kind, it.id)] || [];
+    const last = msgs[msgs.length - 1];
+    const el = document.createElement("div");
+    el.className = "chat-list-item";
+    el.onclick = () => openChat(it.id, it.kind);
+    el.innerHTML = `
+      ${it.avatar}
+      <div class="cl-main">
+        <div class="cl-top">
+          <span class="cl-name">${it.name}</span>
+          <span class="status-badge ${it.status}" style="flex:0 0 auto;">${it.status === "bestaetigt" ? "Bestätigt" : it.status === "abgelehnt" ? "Abgelehnt" : "Offen"}</span>
+        </div>
+        <div class="cl-preview">${last ? (last.sender === state.role ? "Du: " : "") + last.text : it.sub}</div>
+      </div>`;
+    body.appendChild(el);
   });
 }
 
