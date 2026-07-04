@@ -853,6 +853,27 @@
     width:64px; height:64px; border-radius:10px; border:1px solid var(--border-subtle);
     background-size:cover; background-position:center;
   }
+
+  /* ===================== Feature D: Events-Tab ===================== */
+  .event-block{ padding:12px; }
+  .event-block .event-main{ display:flex; gap:12px; }
+  .event-actions{ display:flex; gap:8px; margin-top:12px; }
+  .event-actions .btn{ flex:1; }
+  .badge-saved{
+    font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px;
+    background: rgba(46,242,255,0.15); color: var(--neon-cyan); border:1px solid rgba(46,242,255,0.4);
+  }
+  .event-group-title{
+    font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.6px;
+    color: var(--text-muted); margin:16px 0 8px;
+  }
+  .event-group-title:first-child{ margin-top:0; }
+  .event-lineup-avatars{ display:flex; align-items:center; margin-top:6px; }
+  .event-lineup-avatars .avatar{
+    width:22px; height:22px; font-size:9px; border:2px solid var(--bg-card); margin-left:-7px;
+  }
+  .event-lineup-avatars .avatar:first-child{ margin-left:0; }
+  .event-lineup-avatars span{ font-size:11px; color: var(--text-muted); margin-left:7px; }
 </style>
 </head>
 <body>
@@ -1044,6 +1065,13 @@
 
       <div class="section-title">Deine Locations</div>
       <div id="host-location-list"></div>
+    </section>
+
+    <!-- TAB 4: Events gefolgter DJs (nur Partygänger-Rolle, Feature D) -->
+    <section class="tab-content" id="tab-4">
+      <div class="section-title" style="margin-top:2px;">Deine Events</div>
+      <p class="subtle-text" style="margin-top:-4px; margin-bottom:14px;">Kommende Events von DJs, denen du folgst – plus alles, was du dir gemerkt hast.</p>
+      <div id="events-tab-list"></div>
     </section>
 
     <!-- TAB 3: Party-Karte (für alle Rollen gleich) -->
@@ -1448,6 +1476,10 @@
       <svg id="nav-icon-2" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
       <span id="nav-label-2">Feed</span>
     </button>
+    <button class="nav-btn" id="nav-btn-4" onclick="switchTab(4)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>Events</span>
+    </button>
     <button class="nav-btn" id="nav-btn-3" onclick="switchTab(3)">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.447-2.724A1 1 0 0 1 3 16.382V5.618a1 1 0 0 1 1.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0 0 21 18.382V7.618a1 1 0 0 0-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
       <span>Karte</span>
@@ -1627,13 +1659,15 @@ let locationRequests = [
   { id: 2, locationId: 4, requester: "DJ Nova", requesterRole: "dj", eventType: "Club Night", date: "2026-07-18", time: "22:00", guests: 60, message: "Suche eine Rooftop-Location für eine Sommer-Session.", status: "bestaetigt", linkedBookingId: null },
 ];
 
-// 5 Events für die Party-Karte
+// Events für Party-Karte & Events-Tab. date: echtes Datum (Feature D: Gruppierung
+// "Heute / Diese Woche / Später"); dayLabel bleibt als Anzeige-Kürzel erhalten.
 const events = [
-  { id: 1, name: "Neon Nights", location: "Warehouse 9", city: "Berlin", dayLabel: "Heute", time: "23:00", lineup: ["DJ Nova", "Nightshade"], entry: 15, x: 25, y: 38 },
-  { id: 2, name: "Sunset Sessions", location: "Rooftop Club", city: "Hamburg", dayLabel: "Heute", time: "22:00", lineup: ["Luna Beats"], entry: 10, x: 68, y: 22 },
-  { id: 3, name: "Beat Explosion", location: "Halle 2", city: "München", dayLabel: "Morgen", time: "21:30", lineup: ["MC Solstice", "Electra Vibe"], entry: 20, x: 47, y: 62 },
-  { id: 4, name: "Latin Fever", location: "Club Havanna", city: "Frankfurt", dayLabel: "Heute", time: "23:30", lineup: ["DJ Kalypso"], entry: 12, x: 78, y: 72 },
-  { id: 5, name: "Dark Matter", location: "Bunker Club", city: "Köln", dayLabel: "Sa", time: "00:00", lineup: ["Nightshade", "Electra Vibe"], entry: 18, x: 14, y: 68 },
+  { id: 1, name: "Neon Nights", location: "Warehouse 9", city: "Berlin", date: "2026-07-02", dayLabel: "Heute", time: "23:00", lineup: ["DJ Nova", "Nightshade"], entry: 15, x: 25, y: 38 },
+  { id: 2, name: "Sunset Sessions", location: "Rooftop Club", city: "Hamburg", date: "2026-07-02", dayLabel: "Heute", time: "22:00", lineup: ["Luna Beats"], entry: 10, x: 68, y: 22 },
+  { id: 3, name: "Beat Explosion", location: "Halle 2", city: "München", date: "2026-07-03", dayLabel: "Morgen", time: "21:30", lineup: ["MC Solstice", "Electra Vibe"], entry: 20, x: 47, y: 62 },
+  { id: 4, name: "Latin Fever", location: "Club Havanna", city: "Frankfurt", date: "2026-07-02", dayLabel: "Heute", time: "23:30", lineup: ["DJ Kalypso"], entry: 12, x: 78, y: 72 },
+  { id: 5, name: "Dark Matter", location: "Bunker Club", city: "Köln", date: "2026-07-04", dayLabel: "Sa", time: "00:00", lineup: ["Nightshade", "Electra Vibe"], entry: 18, x: 14, y: 68 },
+  { id: 6, name: "Deep Garden Rave", location: "Alte Gärtnerei", city: "Berlin", date: "2026-07-11", dayLabel: "Sa", time: "21:00", lineup: ["DJ Nova", "Luna Beats"], entry: 14, x: 33, y: 24 },
 ];
 
 // Rollenübergreifende Stories (Feature C): Schlüssel sind Entity-Keys statt reiner DJ-IDs.
@@ -1721,7 +1755,7 @@ const state = {
   booking: { djId: null, date: "", time: "", duration: 4, type: "", genre: "", message: "", locationId: null },
   nextRequestId: 4,
   nextPostId: 6,
-  nextEventId: 6,
+  nextEventId: 7,
   nextLocationId: 5,
   nextLocationRequestId: 3,
   calendarMonth: { year: 2026, month: 6 }, // 0-indexiert: Juli = 6, Startmonat lt. aktuellem Datum
@@ -1732,6 +1766,9 @@ const state = {
   locationBookingTargetId: null, // Location, für die gerade eine Anfrage geschrieben wird
   reviewTarget: { type: "dj", id: null }, // Bewertungsziel: DJ oder Location
   newReviewStars: 0,
+  savedEvents: new Set(),      // Feature D: gemerkte Events ("Hingehen")
+  newEventIds: new Set(),      // Feature D: neue Events seit letztem Tab-Besuch (Badge)
+  remindedEventIds: new Set(), // Feature D: bereits gezeigte Erinnerungs-Toasts
   theme: "dark",                  // "dark" oder "light", siehe setTheme()
   notificationsEnabled: true,     // rein simulierter Schalter ohne echte Push-Logik
   userDisplayName: "Du",          // Anzeigename der Partygänger-Demo-Persona
@@ -1947,7 +1984,10 @@ function switchTab(n){
     document.getElementById("tab-3").classList.add("active");
   } else {
     document.getElementById("tab-4").classList.add("active");
-    if(typeof renderEventsTab === "function") renderEventsTab();
+    renderEventsTab();
+    showSavedEventReminders();
+    state.newEventIds.clear(); // "Neu"-Hinweise gelten als gesehen
+    if(typeof updateNavBadges === "function") updateNavBadges();
   }
   document.getElementById("nav-btn-" + n).classList.add("active");
 }
@@ -2661,6 +2701,7 @@ function toggleFollow(djId){
   state.followed.has(djId) ? state.followed.delete(djId) : state.followed.add(djId);
   renderFollowScroll();
   renderFeed();
+  renderEventsTab(); // Events-Tab hängt an den gefolgten DJs (Feature D)
   openDjProfile(djId); // Ansicht mit aktualisiertem Button neu rendern
 }
 
@@ -2841,22 +2882,28 @@ function renderTonightList(){
 
 function openEventDetail(id){
   const ev = events.find(e => e.id === id);
+  const saved = state.savedEvents.has(ev.id);
   document.getElementById("event-detail-body").innerHTML = `
     <div class="info-block">
-      <h4>${ev.name} ${ev.spontaneous ? '<span class="badge-spontaneous">Spontan</span>' : ''}</h4>
+      <h4>${ev.name} ${ev.spontaneous ? '<span class="badge-spontaneous">Spontan</span>' : ''} ${saved ? '<span class="badge-saved">✓ Gemerkt</span>' : ''}</h4>
       <div class="request-details" style="margin-bottom:0;">
         <div><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ICONS.location}</svg> ${formatEventPlace(ev)}</div>
-        <div><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ICONS.clock}</svg> ${ev.dayLabel}, ${ev.time} Uhr</div>
+        <div><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ICONS.clock}</svg> ${ev.date ? computeDayLabel(ev.date) : ev.dayLabel}, ${ev.time} Uhr</div>
       </div>
       ${ev.description ? `<p class="subtle-text" style="margin:10px 0 0;">${ev.description}</p>` : ""}
+    </div>
+    <div class="btn-row" style="margin-bottom:12px;">
+      <button class="btn ${saved ? 'btn-outline followed' : 'btn-primary'} btn-sm" style="flex:1;" onclick="toggleSaveEvent(${ev.id})">${saved ? "✓ Gemerkt" : "🔔 Hingehen / Merken"}</button>
+      <button class="btn btn-outline btn-sm" style="flex:1;" onclick="shareEventToStory(${ev.id})">📸 In Story teilen</button>
     </div>
     <div class="info-block">
       <h4>Lineup</h4>
       ${ev.lineup.map(name => {
         const dj = djs.find(d => d.name === name);
-        return `<div class="mix-item">
+        return `<div class="mix-item" ${dj ? `onclick="openDjProfile(${dj.id})" style="cursor:pointer;"` : ""}>
           <div class="avatar round" style="width:34px;height:34px;font-size:11px;background:${avatarBg(dj)};">${avatarContent(dj, name)}</div>
           <div style="flex:1; font-size:13.5px; font-weight:600;">${name}</div>
+          ${dj ? '<span class="subtle-text" style="font-size:11px;">Profil →</span>' : ""}
         </div>`;
       }).join("")}
     </div>
@@ -2865,6 +2912,112 @@ function openEventDetail(id){
     </div>
   `;
   openOverlay("overlay-event-detail");
+}
+
+/* =======================================================================
+   TAB 4 (Nutzer): EVENTS GEFOLGTER DJS (Feature D)
+   Chronologisch gruppiert in "Heute", "Diese Woche" (nächste 6 Tage) und "Später".
+   ======================================================================= */
+function eventGroupLabel(ev){
+  const diffDays = Math.round((new Date(ev.date || CURRENT_DATE_STR) - new Date(CURRENT_DATE_STR)) / 86400000);
+  if(diffDays <= 0) return "Heute";
+  if(diffDays < 7) return "Diese Woche";
+  return "Später";
+}
+
+function renderEventsTab(){
+  const container = document.getElementById("events-tab-list");
+  if(!container) return;
+
+  const followedNames = new Set([...state.followed].map(id => getDj(id).name));
+  const relevant = events
+    .filter(ev => ev.lineup.some(n => followedNames.has(n)) || state.savedEvents.has(ev.id))
+    .sort((a, b) => ((a.date || "") + a.time).localeCompare((b.date || "") + b.time));
+
+  container.innerHTML = "";
+  if(relevant.length === 0){
+    container.innerHTML = `<div class="empty-state">
+      <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">${ICONS.calendar}</svg>
+      <p>Folge DJs, um ihre Events hier zu sehen.</p>
+      <button class="btn btn-primary btn-sm" style="margin:10px auto 0;" onclick="switchTab(1)">DJs entdecken</button>
+    </div>`;
+    return;
+  }
+
+  const groups = { "Heute": [], "Diese Woche": [], "Später": [] };
+  relevant.forEach(ev => groups[eventGroupLabel(ev)].push(ev));
+
+  Object.entries(groups).forEach(([label, list]) => {
+    if(list.length === 0) return;
+    const title = document.createElement("div");
+    title.className = "event-group-title";
+    title.textContent = label;
+    container.appendChild(title);
+    list.forEach(ev => container.appendChild(buildEventsTabCard(ev)));
+  });
+}
+
+function buildEventsTabCard(ev){
+  const saved = state.savedEvents.has(ev.id);
+  const el = document.createElement("div");
+  el.className = "post-card event-block";
+  el.innerHTML = `
+    <div class="event-main" onclick="openEventDetail(${ev.id})">
+      <div class="event-time-box"><div class="day">${ev.date ? computeDayLabel(ev.date) : ev.dayLabel}</div><div class="time">${ev.time}</div></div>
+      <div class="event-info">
+        <div class="n">${ev.name}
+          ${ev.spontaneous ? '<span class="badge-spontaneous">Spontan</span>' : ''}
+          ${saved ? '<span class="badge-saved">✓ Gemerkt</span>' : ''}
+          ${state.newEventIds.has(ev.id) ? '<span class="badge-sponsored" style="background:rgba(255,46,230,0.18); color:var(--neon-magenta); border-color:rgba(255,46,230,0.45);">Neu</span>' : ''}
+        </div>
+        <div class="loc"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ICONS.location}</svg>${formatEventPlace(ev)} · ${ev.entry} € Eintritt</div>
+        <div class="event-lineup-avatars">
+          ${ev.lineup.map(name => {
+            const dj = djs.find(d => d.name === name);
+            return `<div class="avatar round" style="background:${avatarBg(dj)};">${avatarContent(dj, name)}</div>`;
+          }).join("")}
+          <span>${ev.lineup.join(" · ")}</span>
+        </div>
+      </div>
+    </div>
+    <div class="event-actions">
+      <button class="btn ${saved ? 'btn-outline followed' : 'btn-primary'} btn-sm" onclick="toggleSaveEvent(${ev.id})">${saved ? "✓ Gemerkt" : "🔔 Hingehen"}</button>
+      <button class="btn btn-outline btn-sm" onclick="shareEventToStory(${ev.id})">📸 In Story teilen</button>
+    </div>`;
+  return el;
+}
+
+// Merken/Hingehen mit Erinnerungs-Simulation (Toast + Badge, Feature D)
+function toggleSaveEvent(id){
+  const ev = events.find(e => e.id === id);
+  if(state.savedEvents.has(id)){
+    state.savedEvents.delete(id);
+    showToast("Aus deinen Events entfernt");
+  } else {
+    state.savedEvents.add(id);
+    showToast(ev.date === CURRENT_DATE_STR
+      ? `🔔 Gemerkt! ${ev.name} ist heute um ${ev.time} Uhr.`
+      : "Gemerkt! Wir erinnern dich am Event-Tag 🔔");
+  }
+  renderEventsTab();
+  if(document.getElementById("overlay-event-detail").classList.contains("open")) openEventDetail(id);
+  if(typeof updateNavBadges === "function") updateNavBadges();
+}
+
+// Verknüpfung mit Feature C: Event als vorbefüllte Story teilen
+function shareEventToStory(id){
+  const ev = events.find(e => e.id === id);
+  const dayText = ev.date ? computeDayLabel(ev.date) : ev.dayLabel;
+  openAddStoryForm(`📅 ${ev.name} @ ${ev.location} – ${dayText}, ${ev.time} Uhr. Wer ist dabei? 🎉`);
+}
+
+// Erinnerungs-Simulation: beim Öffnen des Events-Tabs an heute gemerkte Events erinnern
+function showSavedEventReminders(){
+  const due = events.filter(ev => state.savedEvents.has(ev.id)
+    && ev.date === CURRENT_DATE_STR && !state.remindedEventIds.has(ev.id));
+  if(due.length === 0) return;
+  state.remindedEventIds.add(due[0].id);
+  showToast(`🔔 Erinnerung: ${due[0].name} heute um ${due[0].time} Uhr!`);
 }
 
 /* =======================================================================
@@ -3282,7 +3435,8 @@ function openSpontaneousForm(){
 // Errechnet aus einem Datum das im Prototyp verwendete Tages-Label ("Heute", "Morgen" oder Wochentag)
 function computeDayLabel(dateStr){
   if(dateStr === CURRENT_DATE_STR) return "Heute";
-  if(dateStr === "2026-07-03") return "Morgen";
+  const diffDays = Math.round((new Date(dateStr) - new Date(CURRENT_DATE_STR)) / 86400000);
+  if(diffDays === 1) return "Morgen";
   const weekday = new Date(dateStr + "T00:00:00").toLocaleDateString("de-DE", { weekday: "short" });
   return weekday.replace(".", "");
 }
@@ -3307,6 +3461,7 @@ function submitSpontaneousEvent(){
     name,
     location,
     city: "", // bereits Teil des freien "Ort"-Textfelds
+    date,
     dayLabel,
     time,
     lineup: [dj.name],
@@ -3317,6 +3472,7 @@ function submitSpontaneousEvent(){
     spontaneous: true,
   };
   events.push(newEvent);
+  state.newEventIds.add(newEvent.id); // Badge-Hinweis für den Events-Tab (Feature D)
 
   // Automatische Ankündigung im Feed der Follower
   const dayText = dayLabel === "Heute" ? "heute Abend" : dayLabel === "Morgen" ? "morgen" : "am " + dayLabel;
