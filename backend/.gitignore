@@ -1,0 +1,11 @@
+# Abhängigkeiten
+node_modules/
+
+# SQLite-Datenbankdateien (werden lokal per Seed-Script erzeugt)
+data/*.db
+data/*.db-wal
+data/*.db-shm
+
+# Logs & Betriebssystem-Reste
+*.log
+.DS_Store
