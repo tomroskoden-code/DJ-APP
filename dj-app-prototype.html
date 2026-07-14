@@ -1218,6 +1218,13 @@
 <script>
 /* =======================================================================
    MOCK-DATEN
+
+   Diese Daten sind NICHT mehr die Laufzeit-Datenquelle der App: Beim
+   App-Start werden djs, bookingRequests, feedPosts, events und
+   chatMessages durch die Antworten der REST-API ersetzt (siehe Abschnitt
+   API-ANBINDUNG weiter unten). Die Mock-Blöcke bleiben hier stehen, weil
+   das Seed-Script des Backends (backend/scripts/seed.js, `npm run seed`)
+   sie ausliest und damit die SQLite-Datenbank befüllt.
    ======================================================================= */
 
 // Sammlung wiederverwendbarer SVG-Icon-Pfade (werden per JS in Elemente eingesetzt)
@@ -1240,7 +1247,7 @@ const ICONS = {
 // 6 DJs mit realistischen Beispieldaten
 // isPro: BeatSpot-Pro-Abo aktiv? | sponsored: erscheint als "Gesponsert"-Anzeige in der Suche
 // blockedDates: vom DJ manuell blockierte Tage (ISO-Format), siehe Kalenderfunktion
-const djs = [
+let djs = [
   { id: 1, name: "DJ Nova", genre: "Techno", genres: ["Techno", "House"], price: 120, rating: 4.8, city: "Berlin",
     color: "linear-gradient(135deg,#ff2ee6,#8a3ffc)", available: true, isPro: false, sponsored: false,
     blockedDates: ["2026-07-10", "2026-07-11", "2026-07-25"], avatarEmoji: null,
@@ -1312,7 +1319,8 @@ const djs = [
 ];
 
 // IDs der DJs, die als "Gesponsert" in der Suchliste beworben werden
-const SPONSORED_DJ_IDS = djs.filter(d => d.sponsored).map(d => d.id);
+// (wird nach jedem Laden der DJs aus der API neu berechnet)
+let SPONSORED_DJ_IDS = djs.filter(d => d.sponsored).map(d => d.id);
 
 // Werbe-Post im Feed (Anzeige, unabhängig von gefolgten DJs)
 const feedAd = {
@@ -1355,7 +1363,7 @@ let privateLocations = [
 ];
 
 // 5 Events für die Party-Karte
-const events = [
+let events = [
   { id: 1, name: "Neon Nights", location: "Warehouse 9", city: "Berlin", dayLabel: "Heute", time: "23:00", lineup: ["DJ Nova", "Nightshade"], entry: 15, x: 25, y: 38 },
   { id: 2, name: "Sunset Sessions", location: "Rooftop Club", city: "Hamburg", dayLabel: "Heute", time: "22:00", lineup: ["Luna Beats"], entry: 10, x: 68, y: 22 },
   { id: 3, name: "Beat Explosion", location: "Halle 2", city: "München", dayLabel: "Morgen", time: "21:30", lineup: ["MC Solstice", "Electra Vibe"], entry: 20, x: 47, y: 62 },
@@ -1422,14 +1430,12 @@ const AUTO_REPLIES = [
 const state = {
   role: "user",              // "user" oder "dj"
   currentTab: 1,
-  followed: new Set([1, 2]), // Nutzer folgt anfangs DJ Nova & Luna Beats
+  followed: new Set([1, 2]), // Nutzer folgt anfangs DJ Nova & Luna Beats (Session-Zustand;
+                             // die Follower-Zahl selbst wird am Backend mitgeführt)
   selectedGenres: new Set(),
   loggedInDjId: 1,           // Demo: eingeloggter DJ ist "DJ Nova"
   booking: { djId: null, date: "", time: "", duration: 4, type: "", genre: "", message: "", locationId: null },
-  nextRequestId: 4,
-  nextPostId: 6,
-  nextEventId: 6,
-  nextLocationId: 4,
+  nextLocationId: 4,         // nur noch für private Locations (bewusst ohne Backend, s.u.)
   calendarMonth: { year: 2026, month: 6 }, // 0-indexiert: Juli = 6, Startmonat lt. aktuellem Datum
   activeChatRequestId: null,
   selectedLocationAmenities: new Set(),
@@ -1448,6 +1454,137 @@ const state = {
 
 function getDj(id){ return djs.find(d => d.id === id); }
 function formatFollowers(n){ return n >= 1000 ? (n/1000).toFixed(1).replace(".0","") + "k" : n; }
+
+/* =======================================================================
+   API-ANBINDUNG (Node.js/Express/SQLite-Backend, siehe Ordner backend/)
+
+   Backend starten:  cd backend && npm install && npm run seed && npm start
+
+   Die lokalen Arrays (djs, bookingRequests, feedPosts, events,
+   chatMessages) dienen zur Laufzeit nur noch als Render-Cache: Sie werden
+   beim App-Start und nach jeder schreibenden Aktion mit den Antworten der
+   REST-API gefüllt, alle render*()-Funktionen lesen daraus.
+   ======================================================================= */
+const API_BASE = "http://localhost:3000/api";
+
+// Zentraler fetch-Wrapper: sendet/empfängt JSON und übersetzt Fehler in
+// Exceptions mit der Fehlermeldung des Backends ({ "error": ... })
+async function apiFetch(path, { method = "GET", body } = {}){
+  let response;
+  try {
+    response = await fetch(API_BASE + path, {
+      method,
+      headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    // Netzwerkfehler: Server läuft nicht oder ist nicht erreichbar
+    throw new Error("Backend nicht erreichbar – läuft der Server (backend/, npm start)?");
+  }
+  if(!response.ok){
+    const data = await response.json().catch(() => null);
+    throw new Error((data && data.error) || ("HTTP " + response.status));
+  }
+  return response.status === 204 ? null : response.json();
+}
+
+// Kurzformen für die verwendeten HTTP-Methoden
+function apiGet(path){ return apiFetch(path); }
+function apiPost(path, body){ return apiFetch(path, { method: "POST", body }); }
+function apiPatch(path, body){ return apiFetch(path, { method: "PATCH", body }); }
+
+/* ---- Zeitformat-Helfer (SQL-Zeitstempel des Backends -> Anzeigetexte) --- */
+
+// Das Backend speichert UTC-Zeitstempel im Format "YYYY-MM-DD HH:MM:SS"
+function parseSqlDatetime(sql){
+  return new Date(sql.replace(" ", "T") + "Z");
+}
+
+// Relative Zeitangabe für Feed-Posts, z.B. "gerade eben", "vor 2 Std."
+function formatRelativeTime(createdAt){
+  const minutes = Math.floor((Date.now() - parseSqlDatetime(createdAt).getTime()) / 60000);
+  if(minutes < 1) return "gerade eben";
+  if(minutes < 60) return `vor ${minutes} Min.`;
+  const hours = Math.floor(minutes / 60);
+  if(hours < 24) return `vor ${hours} Std.`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? "vor 1 Tag" : `vor ${days} Tagen`;
+}
+
+// Zeitangabe für Chat-Nachrichten, z.B. "gerade eben", "14:02", "Gestern, 14:02"
+function formatMessageTime(createdAt){
+  const date = parseSqlDatetime(createdAt);
+  if(Date.now() - date.getTime() < 60000) return "gerade eben";
+  const clock = date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  const sameDay = (a, b) => a.toDateString() === b.toDateString();
+  if(sameDay(date, new Date())) return clock;
+  if(sameDay(date, new Date(Date.now() - 86400000))) return "Gestern, " + clock;
+  return date.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) + ", " + clock;
+}
+
+/* ---- Ladehinweise im Stil der bestehenden Empty-States ------------------ */
+function loadingHTML(){
+  return `<div class="empty-state"><p>Lädt…</p></div>`;
+}
+function errorHTML(){
+  return `<div class="empty-state"><p>Daten konnten nicht geladen werden.</p></div>`;
+}
+
+/* ---- Lade-Funktionen: API-Antworten in den lokalen Render-Cache --------- */
+
+// Frische DJ-Daten in den Cache übernehmen, ohne Objektreferenzen zu
+// zerstören; bereits nachgeladene reviews bleiben erhalten, solange die
+// Antwort keine eigenen mitbringt (die Suchliste liefert keine reviews)
+function mergeDjIntoCache(fresh){
+  const cached = djs.find(d => d.id === fresh.id);
+  if(cached){ Object.assign(cached, fresh); return cached; }
+  djs.push(fresh);
+  return fresh;
+}
+
+// Alle DJs (ungefiltert) laden – Basis für Filterchips, Avatare, Kalender usw.
+async function loadDjs(){
+  const list = await apiGet("/djs");
+  list.forEach(mergeDjIntoCache);
+  djs = djs.filter(d => list.some(fresh => fresh.id === d.id));
+  SPONSORED_DJ_IDS = djs.filter(d => d.sponsored).map(d => d.id);
+}
+
+// DJ-Detail inkl. Bewertungen (reviews) laden und in den Cache mergen
+async function loadDjDetail(id){
+  return mergeDjIntoCache(await apiGet(`/djs/${id}`));
+}
+
+// Buchungsanfragen laden. locationId (gewählte private Location) existiert
+// nur clientseitig und wird deshalb beim Neuladen aus dem Cache bewahrt.
+async function loadBookings(){
+  const list = await apiGet("/bookings");
+  bookingRequests = list.map(fresh => {
+    const cached = bookingRequests.find(r => r.id === fresh.id);
+    return cached && cached.locationId ? { ...fresh, locationId: cached.locationId } : fresh;
+  });
+}
+
+// Events der Party-Karte laden
+async function loadEvents(){
+  events = await apiGet("/events");
+}
+
+// Feed-Beiträge laden; createdAt wird für die Anzeige in die gewohnte
+// relative Zeitangabe übersetzt (Feldname time wie im bisherigen Mock)
+async function loadFeedPosts(){
+  feedPosts = (await apiGet("/posts")).map(p => ({ ...p, time: formatRelativeTime(p.createdAt) }));
+}
+
+// Chatverlauf einer Buchung laden (Feldname time wie im bisherigen Mock)
+async function loadChatMessages(bookingId){
+  const msgs = await apiGet(`/bookings/${bookingId}/messages`);
+  chatMessages[bookingId] = msgs.map(m => ({
+    sender: m.sender,
+    text: m.text,
+    time: formatMessageTime(m.createdAt),
+  }));
+}
 
 /* =======================================================================
    AVATAR-HILFSFUNKTIONEN (Farbverlauf + Emoji/Initialen, siehe Profileinstellungen)
@@ -1486,35 +1623,16 @@ function reviewerAvatarHTML(r){
 }
 
 // Ist der eingeloggte Demo-DJ Pro-Mitglied? Dann ist die App für ihn werbefrei.
-function isAdFreeActive(){ return getDj(state.loggedInDjId).isPro === true; }
+// (Guard: solange die DJ-Daten noch nicht geladen sind, gibt es keinen Pro-Status)
+function isAdFreeActive(){
+  const dj = getDj(state.loggedInDjId);
+  return !!dj && dj.isPro === true;
+}
 
 /* =======================================================================
    INITIALISIERUNG
    ======================================================================= */
-function init(){
-  // Städte-Filter dynamisch aus den DJ-Daten befüllen
-  const citySelect = document.getElementById("filter-city");
-  [...new Set(djs.map(d => d.city))].forEach(city => {
-    const opt = document.createElement("option");
-    opt.value = city; opt.textContent = city;
-    citySelect.appendChild(opt);
-  });
-
-  // Genre-Chips dynamisch erzeugen
-  const genreRow = document.getElementById("genre-chip-row");
-  const allGenres = [...new Set(djs.flatMap(d => d.genres))];
-  allGenres.forEach(g => {
-    const chip = document.createElement("button");
-    chip.className = "chip";
-    chip.textContent = g;
-    chip.onclick = () => {
-      state.selectedGenres.has(g) ? state.selectedGenres.delete(g) : state.selectedGenres.add(g);
-      chip.classList.toggle("selected");
-      renderDjList();
-    };
-    genreRow.appendChild(chip);
-  });
-
+async function init(){
   // Event-Typ-Auswahl im Buchungsflow erzeugen
   const typeGrid = document.getElementById("event-type-grid");
   EVENT_TYPES.forEach(type => {
@@ -1566,6 +1684,48 @@ function init(){
     if(Math.abs(dx) > 50){ dx < 0 ? storyNext() : storyPrev(); }
   });
 
+  applyRoleToNav();
+  switchTab(1); // Start-Ansicht: Tab 1 aktiv setzen
+
+  // Ladehinweise anzeigen, solange die API-Antworten ausstehen
+  ["dj-list", "feed-list", "my-requests-list", "request-list", "tonight-list"].forEach(id => {
+    document.getElementById(id).innerHTML = loadingHTML();
+  });
+
+  // Alle Daten vom Backend laden; die Mock-Arrays werden dabei ersetzt.
+  // Schlägt das Laden fehl, bleibt die App mit leeren Zuständen bedienbar.
+  try {
+    await Promise.all([loadDjs(), loadBookings(), loadEvents(), loadFeedPosts()]);
+    await loadDjDetail(state.loggedInDjId); // Bewertungen für das eigene DJ-Profil
+  } catch(err){
+    djs = []; bookingRequests = []; events = []; feedPosts = []; chatMessages = {};
+    SPONSORED_DJ_IDS = [];
+    showToast("Fehler beim Laden: " + err.message);
+  }
+
+  // Städte-Filter dynamisch aus den geladenen DJ-Daten befüllen
+  const citySelect = document.getElementById("filter-city");
+  [...new Set(djs.map(d => d.city))].forEach(city => {
+    const opt = document.createElement("option");
+    opt.value = city; opt.textContent = city;
+    citySelect.appendChild(opt);
+  });
+
+  // Genre-Chips dynamisch aus den geladenen DJ-Daten erzeugen
+  const genreRow = document.getElementById("genre-chip-row");
+  const allGenres = [...new Set(djs.flatMap(d => d.genres))];
+  allGenres.forEach(g => {
+    const chip = document.createElement("button");
+    chip.className = "chip";
+    chip.textContent = g;
+    chip.onclick = () => {
+      state.selectedGenres.has(g) ? state.selectedGenres.delete(g) : state.selectedGenres.add(g);
+      chip.classList.toggle("selected");
+      renderDjList();
+    };
+    genreRow.appendChild(chip);
+  });
+
   renderDjList();
   renderFollowScroll();
   renderFeed();
@@ -1576,8 +1736,6 @@ function init(){
   renderMyRequests();
   renderSelfProfile();
   renderCalendar();
-  applyRoleToNav();
-  switchTab(1); // Start-Ansicht: Tab 1 aktiv setzen
 }
 
 /* =======================================================================
@@ -1649,29 +1807,57 @@ function toggleFilterPanel(){
   document.getElementById("filter-toggle-btn").classList.toggle("active");
 }
 
-function renderDjList(){
+// Laufende Nummer der Suchanfragen: Antworten, die zu einer inzwischen
+// überholten Anfrage gehören, werden verworfen (Race beim schnellen Tippen)
+let djSearchToken = 0;
+
+async function renderDjList(){
   const query = document.getElementById("search-input").value.trim().toLowerCase();
   const priceFilter = document.getElementById("filter-price").value;
   const cityFilter = document.getElementById("filter-city").value;
   const onlyAvailable = document.getElementById("filter-available").checked;
+  const container = document.getElementById("dj-list");
 
-  let list = djs.filter(dj => {
+  // Serverseitige Filter der DJ-Suche (GET /api/djs?city=…&available=…&genre=…)
+  const params = new URLSearchParams();
+  if(cityFilter !== "all") params.set("city", cityFilter);
+  if(onlyAvailable) params.set("available", "true");
+  state.selectedGenres.forEach(g => params.append("genre", g));
+
+  // Ladehinweis nur beim ersten Aufbau; danach bleibt die bisherige Liste
+  // sichtbar, bis die neue Antwort da ist (kein Flackern beim Tippen)
+  if(!container.querySelector(".dj-card")) container.innerHTML = loadingHTML();
+
+  const token = ++djSearchToken;
+  let list;
+  try {
+    list = await apiGet("/djs?" + params.toString());
+  } catch(err){
+    if(token !== djSearchToken) return;
+    container.innerHTML = errorHTML();
+    showToast("DJ-Suche fehlgeschlagen: " + err.message);
+    return;
+  }
+  if(token !== djSearchToken) return; // veraltete Antwort verwerfen
+
+  // Cache aktuell halten (Avatare, Kalender & Co. lesen daraus)
+  list = list.map(mergeDjIntoCache);
+
+  // Freitext (Name ODER Haupt-Genre) und Preisspanne kennt die API so
+  // nicht – diese beiden Filter laufen wie bisher clientseitig
+  list = list.filter(dj => {
     const matchesQuery = !query || dj.name.toLowerCase().includes(query) || dj.genre.toLowerCase().includes(query);
-    const matchesGenre = state.selectedGenres.size === 0 || dj.genres.some(g => state.selectedGenres.has(g));
-    const matchesCity = cityFilter === "all" || dj.city === cityFilter;
-    const matchesAvailability = !onlyAvailable || dj.available;
     let matchesPrice = true;
     if(priceFilter !== "all"){
       const [min, max] = priceFilter.split("-").map(Number);
       matchesPrice = dj.price >= min && dj.price <= max;
     }
-    return matchesQuery && matchesGenre && matchesCity && matchesAvailability && matchesPrice;
+    return matchesQuery && matchesPrice;
   });
 
   // Pro-DJs werden in der Suchliste nach oben priorisiert (echter Vorteil des Pro-Abos)
   list = [...list].sort((a, b) => (b.isPro ? 1 : 0) - (a.isPro ? 1 : 0));
 
-  const container = document.getElementById("dj-list");
   container.innerHTML = "";
 
   if(list.length === 0){
@@ -1714,9 +1900,20 @@ function buildDjCard(dj, isAd){
   return card;
 }
 
-function openDjDetail(id){
-  const dj = getDj(id);
+async function openDjDetail(id){
   const body = document.getElementById("dj-detail-body");
+  body.innerHTML = loadingHTML();
+  openOverlay("overlay-dj-detail");
+
+  // Detail inkl. Bewertungen (reviews) frisch von der API laden
+  let dj;
+  try {
+    dj = await loadDjDetail(id);
+  } catch(err){
+    body.innerHTML = errorHTML();
+    showToast("DJ-Profil konnte nicht geladen werden: " + err.message);
+    return;
+  }
   body.innerHTML = `
     <div class="profile-hero">
       <div class="avatar round" style="background:${avatarBg(dj)};">${avatarContent(dj)}</div>
@@ -1748,7 +1945,6 @@ function openDjDetail(id){
 
     <button class="btn btn-primary" onclick="startBooking(${dj.id})">Jetzt buchen</button>
   `;
-  openOverlay("overlay-dj-detail");
 }
 
 /* =======================================================================
@@ -2093,19 +2289,20 @@ function renderMyRequests(){
 
   mine.forEach(req => {
     const dj = getDj(req.djId);
+    const djName = dj ? dj.name : req.djName; // djName liefert die API als Fallback mit
     const dateFormatted = new Date(req.date).toLocaleDateString("de-DE", {day:"2-digit", month:"2-digit", year:"numeric"});
     const el = document.createElement("div");
     el.className = "request-card";
     el.innerHTML = `
       <div class="request-top">
-        <span class="n">${dj.name}</span>
+        <span class="n">${djName}</span>
         <span class="status-badge ${req.status}">${req.status === "bestaetigt" ? "Bestätigt" : req.status === "abgelehnt" ? "Abgelehnt" : "Offen"}</span>
       </div>
       <div class="request-details">
         <div><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ICONS.clock}</svg> ${req.eventType} · ${req.genre} · ${req.duration} Std. · ${dateFormatted}, ${req.time} Uhr</div>
         <div><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ICONS.location}</svg> ${req.location}</div>
       </div>
-      <button class="btn btn-outline btn-sm" style="width:100%;" onclick="openChat(${req.id})">💬 Chat mit ${dj.name}</button>
+      <button class="btn btn-outline btn-sm" style="width:100%;" onclick="openChat(${req.id})">💬 Chat mit ${djName}</button>
     `;
     container.appendChild(el);
   });
@@ -2122,7 +2319,8 @@ function formatEventPlace(ev){
 function renderMap(){
   const canvas = document.getElementById("map-canvas");
   canvas.innerHTML = "";
-  const selfDjName = getDj(state.loggedInDjId).name;
+  const selfDj = getDj(state.loggedInDjId);
+  const selfDjName = selfDj ? selfDj.name : null;
 
   events.forEach(ev => {
     const isMine = ev.lineup.includes(selfDjName);
@@ -2198,7 +2396,8 @@ function openEventDetail(id){
    TAB 1 (DJ-Rolle): BUCHUNGSANFRAGEN
    ======================================================================= */
 function renderDjRequests(){
-  document.getElementById("loggedin-dj-name-1").textContent = getDj(state.loggedInDjId).name;
+  const selfDj = getDj(state.loggedInDjId);
+  document.getElementById("loggedin-dj-name-1").textContent = selfDj ? selfDj.name : "–";
   const container = document.getElementById("request-list");
   const myRequests = bookingRequests.filter(r => r.djId === state.loggedInDjId);
   container.innerHTML = "";
@@ -2252,6 +2451,7 @@ function updateRequestStatus(id, status){
    ======================================================================= */
 function renderSelfProfile(){
   const dj = getDj(state.loggedInDjId);
+  if(!dj) return; // DJ-Daten (noch) nicht geladen
   document.getElementById("dj-self-avatar").style.background = avatarBg(dj);
   document.getElementById("dj-self-avatar").textContent = avatarContent(dj);
   document.getElementById("dj-self-name").innerHTML = dj.name + (dj.isPro ? ' <span class="badge-pro">PRO</span>' : '');
@@ -2349,6 +2549,7 @@ const CURRENT_DATE_STR = "2026-07-02"; // Referenzdatum für "vergangene Tage" i
 
 function renderCalendar(){
   const dj = getDj(state.loggedInDjId);
+  if(!dj) return; // DJ-Daten (noch) nicht geladen
   const { year, month } = state.calendarMonth;
   const monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
   document.getElementById("calendar-month-label").textContent = monthNames[month] + " " + year;
@@ -2564,7 +2765,7 @@ function submitSpontaneousEvent(){
 // Baut den kompletten Bewertungsbereich (Durchschnitt, Sterne-Verteilung, Einzelbewertungen).
 // readonly=true blendet den "Bewertung schreiben"-Button aus (z.B. im eigenen DJ-Profil).
 function buildReviewsSectionHTML(dj, readonly){
-  const reviews = dj.reviews;
+  const reviews = dj.reviews || []; // reviews kommen erst mit dem DJ-Detail von der API
   const total = reviews.length;
   const avg = total ? reviews.reduce((sum, r) => sum + r.stars, 0) / total : 0;
   const counts = [5, 4, 3, 2, 1].map(star => reviews.filter(r => r.stars === star).length);
@@ -3012,7 +3213,8 @@ function showToast(msg){
   toastTimer = setTimeout(() => toast.classList.remove("show"), 2200);
 }
 
-init();
+// App starten; unerwartete Fehler beim Initialisieren sichtbar machen
+init().catch(err => showToast("Fehler beim Start: " + err.message));
 </script>
 </body>
 </html>
