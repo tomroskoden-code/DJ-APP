@@ -105,18 +105,22 @@ CREATE INDEX IF NOT EXISTS idx_ratings_dj ON ratings(dj_id);
 
 -- Events für die Party-Karte (entspricht events).
 -- x/y sind die Kartenpositionen des Prototyps in Prozent.
+-- Bei spontanen Events steckt die Stadt bereits im Freitext-Ort,
+-- daher darf city leer ('') sein.
 CREATE TABLE IF NOT EXISTS events (
-  id         INTEGER PRIMARY KEY AUTOINCREMENT,
-  name       TEXT NOT NULL,
-  location   TEXT NOT NULL,                   -- Name der Venue
-  city       TEXT NOT NULL,
-  date       TEXT,                            -- ISO-Datum (im Mock nicht vorhanden, daher optional)
-  day_label  TEXT,                            -- Tages-Label des Prototyps ("Heute", "Morgen", "Sa")
-  time       TEXT NOT NULL,                   -- Startzeit (HH:MM)
-  entry      REAL NOT NULL DEFAULT 0,         -- Eintritt in Euro
-  x          REAL,                            -- Kartenposition X in Prozent
-  y          REAL,                            -- Kartenposition Y in Prozent
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  name        TEXT NOT NULL,
+  location    TEXT NOT NULL,                   -- Name der Venue
+  city        TEXT NOT NULL DEFAULT '',
+  date        TEXT,                            -- ISO-Datum (im Mock nicht vorhanden, daher optional)
+  day_label   TEXT,                            -- Tages-Label des Prototyps ("Heute", "Morgen", "Sa")
+  time        TEXT NOT NULL,                   -- Startzeit (HH:MM)
+  entry       REAL NOT NULL DEFAULT 0,         -- Eintritt in Euro
+  x           REAL,                            -- Kartenposition X in Prozent
+  y           REAL,                            -- Kartenposition Y in Prozent
+  description TEXT NOT NULL DEFAULT '',        -- Freitext-Beschreibung (v.a. spontane Events)
+  spontaneous INTEGER NOT NULL DEFAULT 0,      -- 0/1: kurzfristig angekündigtes Event?
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- Lineup eines Events: verweist auf DJs, daher als echte Verknüpfungstabelle
@@ -127,3 +131,17 @@ CREATE TABLE IF NOT EXISTS event_lineup (
   position INTEGER NOT NULL DEFAULT 0,        -- Reihenfolge im Lineup
   PRIMARY KEY (event_id, dj_id)
 );
+
+-- Feed-Beiträge der DJs (entspricht feedPosts).
+-- Der Prototyp kennt genau eine Demo-Persona, daher genügt für den
+-- Like-Zustand eine einfache 0/1-Spalte statt einer Likes-Tabelle.
+CREATE TABLE IF NOT EXISTS posts (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  dj_id      INTEGER NOT NULL REFERENCES djs(id) ON DELETE CASCADE,
+  text       TEXT NOT NULL,
+  likes      INTEGER NOT NULL DEFAULT 0,      -- Anzahl der Likes (Anzeige)
+  liked      INTEGER NOT NULL DEFAULT 0,      -- 0/1: von der Demo-Persona geliked?
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_posts_dj ON posts(dj_id);

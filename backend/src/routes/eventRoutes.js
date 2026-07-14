@@ -52,23 +52,26 @@ router.get("/:id", async (req, res) => {
 //   { "name": "Neon Nights", "location": "Warehouse 9", "city": "Berlin",
 //     "dayLabel": "Heute", "time": "23:00", "entry": 15,
 //     "lineup": ["DJ Nova", "Nightshade"], "x": 25, "y": 38 }
+// city ist optional: Bei spontanen Events des Prototyps steckt die Stadt
+// bereits im Freitext-Ort, dann bleibt city leer.
 router.post("/", async (req, res) => {
   requireField(req.body, "name");
   requireField(req.body, "location");
-  requireField(req.body, "city");
   requireField(req.body, "time");
 
   const djIds = req.body.lineup === undefined ? [] : await resolveLineup(req.body.lineup);
   const event = await eventRepo.createEvent({
     name: req.body.name,
     location: req.body.location,
-    city: req.body.city,
+    city: req.body.city ?? "",
     date: req.body.date ?? null,
     dayLabel: req.body.dayLabel ?? null,
     time: req.body.time,
     entry: req.body.entry === undefined ? 0 : Number(req.body.entry),
     x: req.body.x ?? null,
     y: req.body.y ?? null,
+    description: req.body.description ?? "",
+    spontaneous: req.body.spontaneous === true,
     djIds,
   });
   res.status(201).json(event);

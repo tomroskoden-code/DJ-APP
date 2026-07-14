@@ -45,8 +45,13 @@ Anfragesteller der Buchungen und die Verfasser der Bewertungen.
 | `bookings`     | `let bookingRequests`     | Buchungsanfragen; Status `offen`/`bestaetigt`/`abgelehnt` |
 | `messages`     | `let chatMessages`        | Chat-Nachrichten je Buchung (Rolle `user`/`dj`)   |
 | `ratings`      | `djs[].reviews`           | Bewertungen; Durchschnitt wird in `djs.rating` gecacht |
-| `events`       | `const events`            | Events der Party-Karte                            |
+| `events`       | `let events`              | Events der Party-Karte (inkl. `description`/`spontaneous`) |
 | `event_lineup` | `events[].lineup`         | Verknüpfungstabelle Event ↔ DJ                    |
+| `posts`        | `let feedPosts`           | Feed-Beiträge der DJs (inkl. Like-Zustand der Demo-Persona) |
+
+**Hinweis:** Nach einem Update des Schemas (z.B. neue Tabelle `posts`,
+neue Event-Spalten) einmal `npm run seed` ausführen – das Script setzt die
+Datenbank komplett neu auf.
 
 Das vollständige Schema liegt in [`src/db/schema.sql`](src/db/schema.sql).
 
@@ -118,9 +123,19 @@ Nachkommastelle gerundet – wie `recalcDjRating()` im Prototyp).
 | ------------------------- | ------------ |
 | `GET /api/events`         | Events abrufen. Filter: `city` |
 | `GET /api/events/:id`     | Einzelnes Event |
-| `POST /api/events`        | Event anlegen; `lineup` als Array aus DJ-Namen oder DJ-IDs |
+| `POST /api/events`        | Event anlegen; `lineup` als Array aus DJ-Namen oder DJ-IDs. Optional: `description`, `spontaneous`; `city` darf entfallen (spontane Events tragen die Stadt im Freitext-Ort) |
 | `PATCH /api/events/:id`   | Event aktualisieren; `lineup` ersetzt das bisherige Lineup |
 | `DELETE /api/events/:id`  | Event löschen |
+
+### Feed-Beiträge
+
+| Methode & Pfad           | Beschreibung |
+| ------------------------ | ------------ |
+| `GET /api/posts`         | Feed-Beiträge abrufen (neueste zuerst). Filter: `djId` |
+| `GET /api/posts/:id`     | Einzelner Beitrag |
+| `POST /api/posts`        | Beitrag veröffentlichen (`djId`, `text`) |
+| `PATCH /api/posts/:id`   | Beitrag aktualisieren; `{"liked": true}` passt die Like-Anzahl automatisch an |
+| `DELETE /api/posts/:id`  | Beitrag löschen |
 
 ### Nutzer:innen
 

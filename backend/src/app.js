@@ -13,6 +13,7 @@ import djRoutes from "./routes/djRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import eventRoutes from "./routes/eventRoutes.js";
+import postRoutes from "./routes/postRoutes.js";
 import { djRatingsRouter, ratingsRouter } from "./routes/ratingRoutes.js";
 import { bookingMessagesRouter, messagesRouter } from "./routes/messageRoutes.js";
 
@@ -46,6 +47,7 @@ app.use("/api/bookings", bookingRoutes);
 app.use("/api/bookings/:bookingId/messages", bookingMessagesRouter);
 app.use("/api/messages", messagesRouter);
 app.use("/api/events", eventRoutes);
+app.use("/api/posts", postRoutes);
 
 // 404 für unbekannte API-Pfade
 app.use((req, res) => {

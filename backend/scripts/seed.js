@@ -24,6 +24,7 @@ import * as bookingRepo from "../src/repositories/bookingRepository.js";
 import * as messageRepo from "../src/repositories/messageRepository.js";
 import * as ratingRepo from "../src/repositories/ratingRepository.js";
 import * as eventRepo from "../src/repositories/eventRepository.js";
+import * as postRepo from "../src/repositories/postRepository.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HTML_FILE = path.join(__dirname, "..", "..", "dj-app-prototype.html");
@@ -63,12 +64,12 @@ function extractMockData() {
   // Datenteil isoliert ausführen; der angehängte Objekt-Ausdruck ist der
   // Rückgabewert von runInNewContext und liefert uns die Variablen
   const result = vm.runInNewContext(
-    `${dataCode}\n;({ djs, events, bookingRequests, chatMessages });`,
+    `${dataCode}\n;({ djs, events, bookingRequests, chatMessages, feedPosts });`,
     {},
     { timeout: 5000, filename: "dj-app-prototype.html (Mock-Daten)" }
   );
 
-  for (const key of ["djs", "events", "bookingRequests"]) {
+  for (const key of ["djs", "events", "bookingRequests", "feedPosts"]) {
     if (!Array.isArray(result[key]) || result[key].length === 0) {
       throw new Error(`Mock-Variable "${key}" konnte nicht extrahiert werden.`);
     }
@@ -101,14 +102,26 @@ function parseMockTime(label) {
   return toSqlDatetime(new Date());
 }
 
+// Übersetzt die relativen Feed-Zeitangaben des Prototyps ("vor 2 Std.",
+// "vor 1 Tag") in echte Zeitstempel; unbekannte Formate werden zu "jetzt"
+function parseMockRelativeTime(label) {
+  const match = /^vor (\d+) (Min\.|Std\.|Tag)/.exec(label ?? "");
+  if (!match) return toSqlDatetime(new Date());
+
+  const amount = Number(match[1]);
+  const minutes = { "Min.": 1, "Std.": 60, "Tag": 60 * 24 }[match[2]] * amount;
+  return toSqlDatetime(new Date(Date.now() - minutes * 60 * 1000));
+}
+
 /* -----------------------------------------------------------------------
    3) Seeden
    ----------------------------------------------------------------------- */
 async function seed() {
-  const { djs, events, bookingRequests, chatMessages } = extractMockData();
+  const { djs, events, bookingRequests, chatMessages, feedPosts } = extractMockData();
 
   // Datenbank vollständig zurücksetzen (Reihenfolge wegen Fremdschlüsseln)
   await db.exec(`
+    DROP TABLE IF EXISTS posts;
     DROP TABLE IF EXISTS event_lineup;
     DROP TABLE IF EXISTS events;
     DROP TABLE IF EXISTS messages;
@@ -119,7 +132,7 @@ async function seed() {
   `);
   await db.initSchema();
 
-  const counts = { djs: 0, users: 0, bookings: 0, messages: 0, ratings: 0, events: 0 };
+  const counts = { djs: 0, users: 0, bookings: 0, messages: 0, ratings: 0, events: 0, posts: 0 };
 
   await db.transaction(async () => {
     // --- DJs (mit den Original-IDs des Prototyps) ------------------------
@@ -230,9 +243,23 @@ async function seed() {
         entry: event.entry,
         x: event.x,
         y: event.y,
+        description: event.description ?? "",
+        spontaneous: event.spontaneous === true,
         djIds,
       });
       counts.events++;
+    }
+
+    // --- Feed-Beiträge der DJs (relative Mock-Zeiten -> echte Zeitstempel) --
+    for (const post of feedPosts) {
+      await postRepo.createPost({
+        djId: post.djId,
+        text: post.text,
+        likes: post.likes,
+        liked: post.liked,
+        createdAt: parseMockRelativeTime(post.time),
+      });
+      counts.posts++;
     }
 
     counts.users = (await userRepo.listUsers()).length;
@@ -245,6 +272,7 @@ async function seed() {
   console.log(`  Nachrichten: ${counts.messages}`);
   console.log(`  Bewertungen: ${counts.ratings}`);
   console.log(`  Events:      ${counts.events}`);
+  console.log(`  Feed-Posts:  ${counts.posts}`);
 }
 
 try {

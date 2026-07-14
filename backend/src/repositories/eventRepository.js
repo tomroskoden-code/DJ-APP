@@ -25,6 +25,8 @@ function rowToEvent(row, lineup) {
     entry: row.entry,
     x: row.x,
     y: row.y,
+    description: row.description,
+    spontaneous: row.spontaneous === 1,
     createdAt: row.created_at,
   };
 }
@@ -78,20 +80,22 @@ export async function createEvent({
   id = null,
   name,
   location,
-  city,
+  city = "",
   date = null,
   dayLabel = null,
   time,
   entry = 0,
   x = null,
   y = null,
+  description = "",
+  spontaneous = false,
   djIds = [],
 }) {
   return db.transaction(async () => {
     const { lastInsertId } = await db.run(
-      `INSERT INTO events (id, name, location, city, date, day_label, time, entry, x, y)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, name, location, city, date, dayLabel, time, entry, x, y]
+      `INSERT INTO events (id, name, location, city, date, day_label, time, entry, x, y, description, spontaneous)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, name, location, city, date, dayLabel, time, entry, x, y, description, spontaneous ? 1 : 0]
     );
     const eventId = id ?? lastInsertId;
     await replaceLineup(eventId, djIds);
@@ -102,22 +106,24 @@ export async function createEvent({
 /** Felder eines Events teilweise aktualisieren; `djIds` ersetzt das Lineup. */
 export async function updateEvent(id, fields) {
   const mapping = {
-    name: "name",
-    location: "location",
-    city: "city",
-    date: "date",
-    dayLabel: "day_label",
-    time: "time",
-    entry: "entry",
-    x: "x",
-    y: "y",
+    name: { column: "name" },
+    location: { column: "location" },
+    city: { column: "city" },
+    date: { column: "date" },
+    dayLabel: { column: "day_label" },
+    time: { column: "time" },
+    entry: { column: "entry" },
+    x: { column: "x" },
+    y: { column: "y" },
+    description: { column: "description" },
+    spontaneous: { column: "spontaneous", toDb: (v) => (v ? 1 : 0) },
   };
   const sets = [];
   const params = [];
-  for (const [key, column] of Object.entries(mapping)) {
+  for (const [key, { column, toDb }] of Object.entries(mapping)) {
     if (fields[key] !== undefined) {
       sets.push(`${column} = ?`);
-      params.push(fields[key]);
+      params.push(toDb ? toDb(fields[key]) : fields[key]);
     }
   }
 
