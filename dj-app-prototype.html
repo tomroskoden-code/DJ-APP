@@ -848,7 +848,7 @@
       <div class="post-composer">
         <h4 style="margin:0 0 10px; font-size:13px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px;">Neuen Beitrag / Gig ankündigen</h4>
         <textarea id="new-post-text" placeholder="Was gibt's Neues? z.B. neuer Gig, neuer Mix…"></textarea>
-        <button class="btn btn-primary" onclick="postAnnouncement()">Posten</button>
+        <button class="btn btn-primary" id="post-submit-btn" onclick="postAnnouncement()">Posten</button>
       </div>
 
       <div class="section-title">Deine kommenden Gigs</div>
@@ -970,7 +970,7 @@
         <!-- Schritt 3: Übersicht & Senden -->
         <div id="booking-step-3" style="display:none;">
           <div class="info-block" id="booking-summary"></div>
-          <button class="btn btn-primary" onclick="submitBooking()">Anfrage senden</button>
+          <button class="btn btn-primary" id="booking-submit-btn" onclick="submitBooking()">Anfrage senden</button>
         </div>
 
       </div>
@@ -1070,7 +1070,7 @@
           <label>Kurzbeschreibung (optional)</label>
           <textarea id="spontan-description" placeholder="Was erwartet die Gäste?"></textarea>
         </div>
-        <button class="btn btn-primary" onclick="submitSpontaneousEvent()">🚨 Event ankündigen</button>
+        <button class="btn btn-primary" id="spontan-submit-btn" onclick="submitSpontaneousEvent()">🚨 Event ankündigen</button>
       </div>
     </section>
 
@@ -2071,42 +2071,55 @@ function renderBookingSummary(){
   `;
 }
 
-function submitBooking(){
+async function submitBooking(){
   const b = state.booking;
   const dj = getDj(b.djId);
+  const submitBtn = document.getElementById("booking-submit-btn");
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Wird gesendet…";
 
-  // Neue Anfrage im Mock-Datensatz der Buchungsanfragen ablegen,
-  // damit sie – falls der gebuchte DJ die Demo-DJ-Rolle ist – dort sichtbar wird
-  const newRequestId = state.nextRequestId++;
-  bookingRequests.unshift({
-    id: newRequestId,
-    djId: b.djId,
-    requester: "Du",
-    eventType: b.type || "Sonstiges",
-    date: b.date || "2026-07-02",
-    time: b.time,
-    duration: b.duration,
-    genre: b.genre,
-    location: resolveBookingLocationText(b.locationId),
-    locationId: b.locationId,
-    message: b.message,
-    status: "offen",
-  });
+  // Buchungsanfrage am Backend anlegen; der Anfragesteller ist die
+  // Demo-Persona "Du" (requesterName legt Nutzer:in bei Bedarf an)
+  let request;
+  try {
+    request = await apiPost("/bookings", {
+      djId: b.djId,
+      eventType: b.type || "Sonstiges",
+      date: b.date || CURRENT_DATE_STR,
+      time: b.time,
+      duration: b.duration,
+      genre: b.genre,
+      location: resolveBookingLocationText(b.locationId),
+      message: b.message,
+      requesterName: "Du",
+    });
+  } catch(err){
+    showToast("Anfrage fehlgeschlagen: " + err.message);
+    return;
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Anfrage senden";
+  }
+
+  // In den Cache übernehmen; locationId (gewählte private Location)
+  // existiert nur clientseitig und wird der API-Antwort beigelegt
+  bookingRequests.unshift({ ...request, locationId: b.locationId });
   renderDjRequests();
   renderMyRequests();
 
-  const dateFormatted = b.date
-    ? new Date(b.date).toLocaleDateString("de-DE", {weekday:"short", day:"2-digit", month:"long"})
+  // Bestätigungsansicht aus den Daten der API-Antwort aufbauen
+  const dateFormatted = request.date
+    ? new Date(request.date).toLocaleDateString("de-DE", {weekday:"short", day:"2-digit", month:"long"})
     : "–";
-  const estimatedPrice = b.duration * dj.price;
+  const estimatedPrice = request.duration * dj.price;
   document.getElementById("confirmation-summary").innerHTML = `
     <div class="booking-summary-row"><span class="lbl">DJ</span><span>${dj.name}</span></div>
     <div class="booking-summary-row"><span class="lbl">Datum</span><span>${dateFormatted}</span></div>
-    <div class="booking-summary-row"><span class="lbl">Uhrzeit</span><span>${b.time} Uhr</span></div>
-    <div class="booking-summary-row"><span class="lbl">Dauer</span><span>${b.duration} Std.</span></div>
-    <div class="booking-summary-row"><span class="lbl">Event-Typ</span><span>${b.type || "–"}</span></div>
-    <div class="booking-summary-row"><span class="lbl">Genre</span><span>${b.genre || "–"}</span></div>
-    <div class="booking-summary-row"><span class="lbl">Veranstaltungsort</span><span style="text-align:right; max-width:60%;">${resolveBookingLocationText(b.locationId)}</span></div>
+    <div class="booking-summary-row"><span class="lbl">Uhrzeit</span><span>${request.time} Uhr</span></div>
+    <div class="booking-summary-row"><span class="lbl">Dauer</span><span>${request.duration} Std.</span></div>
+    <div class="booking-summary-row"><span class="lbl">Event-Typ</span><span>${request.eventType || "–"}</span></div>
+    <div class="booking-summary-row"><span class="lbl">Genre</span><span>${request.genre || "–"}</span></div>
+    <div class="booking-summary-row"><span class="lbl">Veranstaltungsort</span><span style="text-align:right; max-width:60%;">${request.location}</span></div>
     <div class="booking-summary-row"><span class="lbl">Preis (geschätzt)</span><span class="price-tag">${estimatedPrice} €</span></div>
   `;
   closeOverlay("overlay-booking");
@@ -2202,32 +2215,67 @@ function buildAdCard(){
   return el;
 }
 
-function toggleLike(postId){
+async function toggleLike(postId){
   const post = feedPosts.find(p => p.id === postId);
-  post.liked = !post.liked;
-  post.likes += post.liked ? 1 : -1;
+  if(!post) return;
+
+  // Like-Zustand am Backend umschalten (passt die Like-Anzahl mit an)
+  let fresh;
+  try {
+    fresh = await apiPatch(`/posts/${postId}`, { liked: !post.liked });
+  } catch(err){
+    showToast("Like fehlgeschlagen: " + err.message);
+    return;
+  }
+  Object.assign(post, fresh, { time: formatRelativeTime(fresh.createdAt) });
   renderFeed();
 }
 
-function toggleFollow(djId){
-  state.followed.has(djId) ? state.followed.delete(djId) : state.followed.add(djId);
+async function toggleFollow(djId){
+  const dj = getDj(djId);
+  if(!dj) return;
+  const willFollow = !state.followed.has(djId);
+
+  // Die Follower-Zahl des DJs wird am Backend mitgeführt; wem die
+  // Demo-Persona folgt, bleibt Session-Zustand (state.followed)
+  try {
+    const fresh = await apiPatch(`/djs/${djId}`, { followers: dj.followers + (willFollow ? 1 : -1) });
+    Object.assign(dj, fresh);
+  } catch(err){
+    showToast("Folgen fehlgeschlagen: " + err.message);
+    return;
+  }
+  willFollow ? state.followed.add(djId) : state.followed.delete(djId);
   renderFollowScroll();
   renderFeed();
   openDjProfile(djId); // Ansicht mit aktualisiertem Button neu rendern
 }
 
-function openDjProfile(djId){
-  const dj = getDj(djId);
+async function openDjProfile(djId){
+  const body = document.getElementById("dj-profile-body");
+  body.innerHTML = loadingHTML();
+  openOverlay("overlay-dj-profile");
+
+  // Detail inkl. Bewertungen (reviews) frisch von der API laden
+  let dj;
+  try {
+    dj = await loadDjDetail(djId);
+  } catch(err){
+    body.innerHTML = errorHTML();
+    showToast("DJ-Profil konnte nicht geladen werden: " + err.message);
+    return;
+  }
   const isFollowed = state.followed.has(djId);
   const upcoming = events.filter(e => e.lineup.includes(dj.name));
 
-  document.getElementById("dj-profile-body").innerHTML = `
+  body.innerHTML = `
     <div class="profile-hero">
       <div class="avatar round" style="background:${avatarBg(dj)};">${avatarContent(dj)}</div>
       <h3>${dj.name}</h3>
       <div class="genre">${dj.city}</div>
       <div class="stat-row">
-        <div class="stat"><div class="num">${formatFollowers(dj.followers + (isFollowed?1:0))}</div><div class="lbl">Follower</div></div>
+        <!-- Die Follower-Zahl enthält das eigene Folgen bereits (PATCH in toggleFollow) -->
+        <div class="stat"><div class="num">${formatFollowers(dj.followers)}</div><div class="lbl">Follower</div></div>
         <div class="stat"><div class="num">${dj.rating} ★</div><div class="lbl">Bewertung</div></div>
       </div>
       <div class="tag-row">${dj.genres.map(g => `<span class="tag">${g}</span>`).join("")}</div>
@@ -2261,7 +2309,6 @@ function openDjProfile(djId){
       ${buildReviewsSectionHTML(dj, false)}
     </div>
   `;
-  openOverlay("overlay-dj-profile");
 }
 
 // Wechselt innerhalb des Feed-Tabs zwischen "Feed" und "Meine Anfragen"
@@ -2437,9 +2484,17 @@ function renderDjRequests(){
   });
 }
 
-function updateRequestStatus(id, status){
+async function updateRequestStatus(id, status){
+  // Status am Backend ändern und die Antwort in den Cache übernehmen
+  let fresh;
+  try {
+    fresh = await apiPatch(`/bookings/${id}`, { status });
+  } catch(err){
+    showToast("Statuswechsel fehlgeschlagen: " + err.message);
+    return;
+  }
   const req = bookingRequests.find(r => r.id === id);
-  req.status = status;
+  if(req) Object.assign(req, fresh);
   renderDjRequests();
   renderMyRequests();
   renderCalendar(); // bestätigte Buchungen blockieren den Tag automatisch im Kalender
@@ -2464,11 +2519,24 @@ function renderSelfProfile(){
   document.getElementById("dj-self-reviews").innerHTML = buildReviewsSectionHTML(dj, true);
 }
 
-// Live-Übernahme des Preises aus dem DJ-Tab in die Mock-Daten (Bio/Name/Avatar: siehe Profileinstellungen)
+// Live-Übernahme des Preises aus dem DJ-Tab (Bio/Name/Avatar: siehe Profileinstellungen).
+// Die Anzeige folgt sofort; gespeichert wird gebündelt per PATCH ans Backend,
+// weil das Eingabefeld sonst bei jedem Tastendruck einen Request auslösen würde.
+let priceSaveTimer;
 function updateSelfProfile(){
   const dj = getDj(state.loggedInDjId);
+  if(!dj) return;
   dj.price = Number(document.getElementById("edit-price").value) || dj.price;
   document.getElementById("dj-self-price").textContent = dj.price;
+
+  clearTimeout(priceSaveTimer);
+  priceSaveTimer = setTimeout(async () => {
+    try {
+      Object.assign(dj, await apiPatch(`/djs/${dj.id}`, { price: dj.price }));
+    } catch(err){
+      showToast("Preis speichern fehlgeschlagen: " + err.message);
+    }
+  }, 500);
 }
 
 function renderSelfGigs(){
@@ -2482,12 +2550,26 @@ function renderSelfGigs(){
     </div>`).join("") : `<p class="subtle-text">Aktuell keine geplanten Gigs.</p>`;
 }
 
-function postAnnouncement(){
+async function postAnnouncement(){
   const textarea = document.getElementById("new-post-text");
   const text = textarea.value.trim();
   if(!text) return;
 
-  feedPosts.unshift({ id: state.nextPostId++, djId: state.loggedInDjId, text, time: "gerade eben", likes: 0, liked: false });
+  const btn = document.getElementById("post-submit-btn");
+  btn.disabled = true;
+  btn.textContent = "Postet…";
+
+  // Beitrag am Backend anlegen und den Feed mit den API-Daten neu aufbauen
+  try {
+    await apiPost("/posts", { djId: state.loggedInDjId, text });
+    await loadFeedPosts();
+  } catch(err){
+    showToast("Posten fehlgeschlagen: " + err.message);
+    return;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Posten";
+  }
   textarea.value = "";
   renderFeed();
   showToast("Beitrag veröffentlicht ✓");
@@ -2523,24 +2605,26 @@ function renderProOverlay(){
   `;
 }
 
-// Simulierter Abo-Abschluss: kein echtes Zahlungssystem, nur Status im state
-function subscribePro(){
-  getDj(state.loggedInDjId).isPro = true;
+// Simulierter Abo-Abschluss: kein echtes Zahlungssystem, der Pro-Status
+// wird per PATCH am DJ-Datensatz des Backends gespeichert
+async function setProStatus(isPro, successMessage){
+  const dj = getDj(state.loggedInDjId);
+  if(!dj) return;
+  try {
+    Object.assign(dj, await apiPatch(`/djs/${dj.id}`, { isPro }));
+  } catch(err){
+    showToast("Abo-Änderung fehlgeschlagen: " + err.message);
+    return;
+  }
   renderProOverlay();
   renderSelfProfile();
   renderDjList();
   renderFeed();
-  showToast("Willkommen bei BeatSpot Pro! 🚀");
+  showToast(successMessage);
 }
 
-function cancelPro(){
-  getDj(state.loggedInDjId).isPro = false;
-  renderProOverlay();
-  renderSelfProfile();
-  renderDjList();
-  renderFeed();
-  showToast("Pro-Abo gekündigt");
-}
+function subscribePro(){ setProStatus(true, "Willkommen bei BeatSpot Pro! 🚀"); }
+function cancelPro(){ setProStatus(false, "Pro-Abo gekündigt"); }
 
 /* =======================================================================
    KALENDER (DJ-Verfügbarkeit)
@@ -2598,28 +2682,35 @@ function changeCalendarMonth(delta){
   renderCalendar();
 }
 
-// Manuelles Blockieren/Freigeben eines Tages durch den DJ
-function toggleBlockedDate(dateStr){
+// Manuelles Blockieren/Freigeben eines Tages durch den DJ –
+// die blockierten Tage werden als Ganzes per PATCH am Backend gespeichert
+async function toggleBlockedDate(dateStr){
   const dj = getDj(state.loggedInDjId);
-  const idx = dj.blockedDates.indexOf(dateStr);
-  if(idx === -1){
-    dj.blockedDates.push(dateStr);
-    showToast("Tag blockiert");
-  } else {
-    dj.blockedDates.splice(idx, 1);
-    showToast("Tag freigegeben");
+  if(!dj) return;
+  const wasBlocked = dj.blockedDates.includes(dateStr);
+  const blockedDates = wasBlocked
+    ? dj.blockedDates.filter(d => d !== dateStr)
+    : [...dj.blockedDates, dateStr];
+
+  try {
+    Object.assign(dj, await apiPatch(`/djs/${dj.id}`, { blockedDates }));
+  } catch(err){
+    showToast("Kalender speichern fehlgeschlagen: " + err.message);
+    return;
   }
   renderCalendar();
+  showToast(wasBlocked ? "Tag freigegeben" : "Tag blockiert");
 }
 
 /* =======================================================================
    CHAT (pro Buchungsanfrage)
    ======================================================================= */
-function openChat(requestId){
+async function openChat(requestId){
   state.activeChatRequestId = requestId;
   const req = bookingRequests.find(r => r.id === requestId);
+  if(!req) return;
   const dj = getDj(req.djId);
-  const partnerName = state.role === "dj" ? displayName(req.requester) : dj.name;
+  const partnerName = state.role === "dj" ? displayName(req.requester) : (dj ? dj.name : req.djName);
   document.getElementById("chat-title").textContent = "Chat mit " + partnerName;
 
   // Bei ausgewählter privater Location einen kurzen Hinweis über dem Chatverlauf anzeigen
@@ -2632,10 +2723,18 @@ function openChat(requestId){
     banner.style.display = "none";
   }
 
-  if(!chatMessages[requestId]) chatMessages[requestId] = [];
-  renderChatMessages();
+  document.getElementById("chat-messages").innerHTML = loadingHTML();
   document.getElementById("chat-input").value = "";
   openOverlay("overlay-chat");
+
+  // Chatverlauf vom Backend laden
+  try {
+    await loadChatMessages(requestId);
+  } catch(err){
+    if(!chatMessages[requestId]) chatMessages[requestId] = [];
+    showToast("Chat konnte nicht geladen werden: " + err.message);
+  }
+  if(state.activeChatRequestId === requestId) renderChatMessages();
 }
 
 function renderChatMessages(){
@@ -2648,7 +2747,7 @@ function renderChatMessages(){
     container.innerHTML = `<div class="empty-state" style="padding-top:60px;"><p>Noch keine Nachrichten. Schreib die erste!</p></div>`;
   } else {
     const req = bookingRequests.find(r => r.id === id);
-    const dj = getDj(req.djId);
+    const dj = req ? getDj(req.djId) : null;
     msgs.forEach(m => {
       const row = document.createElement("div");
       row.className = "chat-row " + (m.sender === state.role ? "mine" : "theirs");
@@ -2663,27 +2762,43 @@ function renderChatMessages(){
   container.scrollTop = container.scrollHeight;
 }
 
-function sendChatMessage(){
+async function sendChatMessage(){
   const input = document.getElementById("chat-input");
   const text = input.value.trim();
   if(!text) return;
 
   const id = state.activeChatRequestId;
-  if(!chatMessages[id]) chatMessages[id] = [];
-  chatMessages[id].push({ sender: state.role, text, time: "gerade eben" });
   input.value = "";
-  renderChatMessages();
 
-  // Simulierte Antwort der Gegenseite nach kurzer Verzögerung, damit der Chat lebendig wirkt
+  // Nachricht am Backend speichern und die Antwort in den Cache übernehmen
+  let message;
+  try {
+    message = await apiPost(`/bookings/${id}/messages`, { sender: state.role, text });
+  } catch(err){
+    input.value = text; // Eingabe zurückgeben, damit nichts verloren geht
+    showToast("Senden fehlgeschlagen: " + err.message);
+    return;
+  }
+  if(!chatMessages[id]) chatMessages[id] = [];
+  chatMessages[id].push({ sender: message.sender, text: message.text, time: formatMessageTime(message.createdAt) });
+  if(state.activeChatRequestId === id) renderChatMessages();
+
+  // Simulierte Antwort der Gegenseite nach kurzer Verzögerung, damit der
+  // Chat lebendig wirkt – ebenfalls über die API, damit der Verlauf
+  // vollständig in der Datenbank liegt
   const replySender = state.role === "user" ? "dj" : "user";
-  setTimeout(() => {
-    chatMessages[id].push({
-      sender: replySender,
-      text: AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)],
-      time: "gerade eben",
-    });
-    if(state.activeChatRequestId === id && document.getElementById("overlay-chat").classList.contains("open")){
-      renderChatMessages();
+  setTimeout(async () => {
+    try {
+      const reply = await apiPost(`/bookings/${id}/messages`, {
+        sender: replySender,
+        text: AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)],
+      });
+      chatMessages[id].push({ sender: reply.sender, text: reply.text, time: formatMessageTime(reply.createdAt) });
+      if(state.activeChatRequestId === id && document.getElementById("overlay-chat").classList.contains("open")){
+        renderChatMessages();
+      }
+    } catch {
+      // Die simulierte Antwort ist rein dekorativ – Fehler hier still ignorieren
     }
   }, 1400);
 }
@@ -2709,7 +2824,7 @@ function computeDayLabel(dateStr){
   return weekday.replace(".", "");
 }
 
-function submitSpontaneousEvent(){
+async function submitSpontaneousEvent(){
   const name = document.getElementById("spontan-name").value.trim();
   const location = document.getElementById("spontan-location").value.trim();
   const date = document.getElementById("spontan-date").value || CURRENT_DATE_STR;
@@ -2723,33 +2838,40 @@ function submitSpontaneousEvent(){
   }
 
   const dj = getDj(state.loggedInDjId);
+  if(!dj) return;
   const dayLabel = computeDayLabel(date);
-  const newEvent = {
-    id: state.nextEventId++,
-    name,
-    location,
-    city: "", // bereits Teil des freien "Ort"-Textfelds
-    dayLabel,
-    time,
-    lineup: [dj.name],
-    entry: entryVal ? Number(entryVal) : 0,
-    description,
-    x: 15 + Math.random() * 65,
-    y: 18 + Math.random() * 58,
-    spontaneous: true,
-  };
-  events.push(newEvent);
+  const btn = document.getElementById("spontan-submit-btn");
+  btn.disabled = true;
+  btn.textContent = "Wird angekündigt…";
 
-  // Automatische Ankündigung im Feed der Follower
+  // Event und Feed-Ankündigung am Backend anlegen, danach beide
+  // Datenbestände frisch aus der API übernehmen
   const dayText = dayLabel === "Heute" ? "heute Abend" : dayLabel === "Morgen" ? "morgen" : "am " + dayLabel;
-  feedPosts.unshift({
-    id: state.nextPostId++,
-    djId: dj.id,
-    text: `🚨 Spontan ${dayText}: ${name} im ${location}!`,
-    time: "gerade eben",
-    likes: 0,
-    liked: false,
-  });
+  try {
+    await apiPost("/events", {
+      name,
+      location,
+      city: "", // bereits Teil des freien "Ort"-Textfelds
+      date,
+      dayLabel,
+      time,
+      lineup: [dj.name],
+      entry: entryVal ? Number(entryVal) : 0,
+      description,
+      x: 15 + Math.random() * 65,
+      y: 18 + Math.random() * 58,
+      spontaneous: true,
+    });
+    // Automatische Ankündigung im Feed der Follower
+    await apiPost("/posts", { djId: dj.id, text: `🚨 Spontan ${dayText}: ${name} im ${location}!` });
+    await Promise.all([loadEvents(), loadFeedPosts()]);
+  } catch(err){
+    showToast("Ankündigen fehlgeschlagen: " + err.message);
+    return;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "🚨 Event ankündigen";
+  }
 
   closeOverlay("overlay-spontaneous");
   renderMap();
@@ -2822,32 +2944,41 @@ function selectReviewStars(value){
   });
 }
 
-// Aktualisiert die Durchschnittsbewertung eines DJs anhand seiner aktuellen Bewertungen
-function recalcDjRating(dj){
-  const total = dj.reviews.length;
-  dj.rating = total ? Math.round((dj.reviews.reduce((s, r) => s + r.stars, 0) / total) * 10) / 10 : 0;
-}
-
-function submitReview(){
+async function submitReview(){
   if(state.newReviewStars === 0){
     showToast("Bitte wähle zuerst eine Sternebewertung.");
     return;
   }
-  const dj = getDj(state.reviewTargetDjId);
+  const djId = state.reviewTargetDjId;
   const comment = document.getElementById("review-comment").value.trim();
-  dj.reviews.unshift({ name: "Du", stars: state.newReviewStars, comment: comment || "(kein Kommentar)", date: CURRENT_DATE_STR });
-  recalcDjRating(dj);
+
+  // Bewertung am Backend anlegen; die Durchschnittsbewertung des DJs
+  // (djs.rating) berechnet das Backend dabei automatisch neu
+  try {
+    await apiPost(`/djs/${djId}/ratings`, {
+      stars: state.newReviewStars,
+      comment: comment || "(kein Kommentar)",
+      authorName: "Du",
+    });
+    await loadDjDetail(djId); // frische Bewertungen + neuen Durchschnitt übernehmen
+  } catch(err){
+    showToast("Bewertung fehlgeschlagen: " + err.message);
+    return;
+  }
 
   closeOverlay("overlay-write-review");
   renderDjList();
   // Je nachdem, von wo aus die Bewertung gestartet wurde, die passende Ansicht neu rendern
-  if(document.getElementById("overlay-dj-detail").classList.contains("open")) openDjDetail(dj.id);
-  if(document.getElementById("overlay-dj-profile").classList.contains("open")) openDjProfile(dj.id);
+  if(document.getElementById("overlay-dj-detail").classList.contains("open")) openDjDetail(djId);
+  if(document.getElementById("overlay-dj-profile").classList.contains("open")) openDjProfile(djId);
   showToast("Danke für deine Bewertung! ⭐");
 }
 
 /* =======================================================================
    PRIVATE LOCATIONS (Nutzer-Rolle)
+
+   Bewusst ohne Backend-Anbindung: Das Backend kennt (noch) keine
+   Ressource für private Locations, daher bleiben sie Session-Zustand.
    ======================================================================= */
 function openLocationForm(){
   document.getElementById("loc-name").value = "";
@@ -2954,14 +3085,14 @@ function openSettingsOverlay(){
 function getCurrentAvatarEntity(){
   if(state.role === "user") return state.userAvatar;
   const dj = getDj(state.loggedInDjId);
-  return { color: dj.color, emoji: dj.avatarEmoji };
+  return dj ? { color: dj.color, emoji: dj.avatarEmoji } : { color: "#444", emoji: null };
 }
 
 function renderSettingsOverlay(){
   const isUser = state.role === "user";
   const dj = getDj(state.loggedInDjId);
-  const targetName = isUser ? state.userDisplayName : dj.name;
-  const targetBio = isUser ? state.userBio : dj.bio;
+  const targetName = isUser ? state.userDisplayName : (dj ? dj.name : "–");
+  const targetBio = isUser ? state.userBio : (dj ? dj.bio : "");
   const avatar = getCurrentAvatarEntity();
 
   document.getElementById("settings-body").innerHTML = `
@@ -3013,37 +3144,77 @@ function buildAvatarGallery(){
   });
 }
 
-function selectAvatar(preset){
+async function selectAvatar(preset){
   if(state.role === "user"){
+    // Die Partygänger-Demo-Persona lebt nur im Session-State (kein Backend-Datensatz)
     state.userAvatar = { color: preset.color, emoji: preset.emoji };
   } else {
+    // Avatar des eingeloggten DJs am Backend speichern
     const dj = getDj(state.loggedInDjId);
-    dj.color = preset.color;
-    dj.avatarEmoji = preset.emoji;
+    if(!dj) return;
+    try {
+      Object.assign(dj, await apiPatch(`/djs/${dj.id}`, { color: preset.color, avatarEmoji: preset.emoji }));
+    } catch(err){
+      showToast("Profilbild speichern fehlgeschlagen: " + err.message);
+      return;
+    }
   }
   renderSettingsOverlay();
   refreshAllAvatarDependentViews();
   showToast("Profilbild aktualisiert ✓");
 }
 
+// Name/Bio werden beim Tippen sofort lokal übernommen (Anzeige wie bisher)
+// und gebündelt per PATCH ans Backend geschickt (ein Request pro Tipp-Pause)
+let nameSaveTimer;
 function updateSettingsName(){
   const val = document.getElementById("settings-name").value;
   if(state.role === "user"){
+    // Anzeigename der Demo-Persona: nur Session-State, "Du" bleibt der
+    // stabile Schlüssel für Buchungen/Bewertungen am Backend
     state.userDisplayName = val || "Du";
-  } else {
-    const dj = getDj(state.loggedInDjId);
-    const oldName = dj.name;
-    dj.name = val || oldName;
-    // Namensänderung in bestehenden Event-Lineups nachziehen, sonst brechen "Kommende Gigs" & Party-Karte
-    events.forEach(e => { e.lineup = e.lineup.map(n => n === oldName ? dj.name : n); });
+    refreshAllAvatarDependentViews();
+    return;
   }
+  const dj = getDj(state.loggedInDjId);
+  if(!dj) return;
+  const oldName = dj.name;
+  dj.name = val || oldName;
+  // Namensänderung in bestehenden Event-Lineups nachziehen, sonst brechen "Kommende Gigs" & Party-Karte
+  events.forEach(e => { e.lineup = e.lineup.map(n => n === oldName ? dj.name : n); });
   refreshAllAvatarDependentViews();
+
+  clearTimeout(nameSaveTimer);
+  nameSaveTimer = setTimeout(async () => {
+    try {
+      Object.assign(dj, await apiPatch(`/djs/${dj.id}`, { name: dj.name }));
+      // Die API liefert Lineups über die DJ-IDs, daher Events frisch laden
+      await loadEvents();
+      renderMap();
+      renderTonightList();
+      renderSelfGigs();
+    } catch(err){
+      showToast("Name speichern fehlgeschlagen: " + err.message);
+    }
+  }, 500);
 }
 
+let bioSaveTimer;
 function updateSettingsBio(){
   const val = document.getElementById("settings-bio").value;
-  if(state.role === "user"){ state.userBio = val; }
-  else { getDj(state.loggedInDjId).bio = val; }
+  if(state.role === "user"){ state.userBio = val; return; }
+  const dj = getDj(state.loggedInDjId);
+  if(!dj) return;
+  dj.bio = val;
+
+  clearTimeout(bioSaveTimer);
+  bioSaveTimer = setTimeout(async () => {
+    try {
+      Object.assign(dj, await apiPatch(`/djs/${dj.id}`, { bio: dj.bio }));
+    } catch(err){
+      showToast("Bio speichern fehlgeschlagen: " + err.message);
+    }
+  }, 500);
 }
 
 function setNotifications(enabled){
@@ -3070,6 +3241,9 @@ function refreshAllAvatarDependentViews(){
 
 /* =======================================================================
    STORIES (wie Instagram, 24 Std. simuliert aktiv)
+
+   Bewusst ohne Backend-Anbindung: Das Backend kennt (noch) keine
+   Story-Ressource, daher bleiben Stories Session-Zustand.
    ======================================================================= */
 function getActiveStories(djId){
   return (storiesByDj[djId] || []).filter(s => s.hoursAgo < 24).sort((a, b) => b.hoursAgo - a.hoursAgo);
