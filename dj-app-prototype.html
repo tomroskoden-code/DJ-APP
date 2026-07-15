@@ -1906,15 +1906,18 @@ async function openDjDetail(id){
   openOverlay("overlay-dj-detail");
 
   // Detail inkl. Bewertungen (reviews) frisch von der API laden
-  let dj;
   try {
-    dj = await loadDjDetail(id);
+    renderDjDetailBody(await loadDjDetail(id));
   } catch(err){
     body.innerHTML = errorHTML();
     showToast("DJ-Profil konnte nicht geladen werden: " + err.message);
-    return;
   }
-  body.innerHTML = `
+}
+
+// Baut die Detailansicht aus dem (bereits geladenen) Cache-Objekt auf –
+// nach Aktionen wie einer neuen Bewertung genügt so ein direkter Re-Render
+function renderDjDetailBody(dj){
+  document.getElementById("dj-detail-body").innerHTML = `
     <div class="profile-hero">
       <div class="avatar round" style="background:${avatarBg(dj)};">${avatarContent(dj)}</div>
       <h3>${dj.name}</h3>
@@ -2248,7 +2251,9 @@ async function toggleFollow(djId){
   willFollow ? state.followed.add(djId) : state.followed.delete(djId);
   renderFollowScroll();
   renderFeed();
-  openDjProfile(djId); // Ansicht mit aktualisiertem Button neu rendern
+  // Ansicht mit aktualisiertem Button direkt aus dem Cache neu rendern
+  // (die Bewertungen wurden beim Öffnen des Profils bereits geladen)
+  renderDjProfileBody(dj);
 }
 
 async function openDjProfile(djId){
@@ -2257,18 +2262,21 @@ async function openDjProfile(djId){
   openOverlay("overlay-dj-profile");
 
   // Detail inkl. Bewertungen (reviews) frisch von der API laden
-  let dj;
   try {
-    dj = await loadDjDetail(djId);
+    renderDjProfileBody(await loadDjDetail(djId));
   } catch(err){
     body.innerHTML = errorHTML();
     showToast("DJ-Profil konnte nicht geladen werden: " + err.message);
-    return;
   }
-  const isFollowed = state.followed.has(djId);
+}
+
+// Baut die Profilansicht aus dem (bereits geladenen) Cache-Objekt auf –
+// nach Folgen/Bewerten genügt so ein direkter Re-Render ohne Ladehinweis
+function renderDjProfileBody(dj){
+  const isFollowed = state.followed.has(dj.id);
   const upcoming = events.filter(e => e.lineup.includes(dj.name));
 
-  body.innerHTML = `
+  document.getElementById("dj-profile-body").innerHTML = `
     <div class="profile-hero">
       <div class="avatar round" style="background:${avatarBg(dj)};">${avatarContent(dj)}</div>
       <h3>${dj.name}</h3>
@@ -2529,10 +2537,13 @@ function updateSelfProfile(){
   dj.price = Number(document.getElementById("edit-price").value) || dj.price;
   document.getElementById("dj-self-price").textContent = dj.price;
 
+  // Wert beim Planen einfangen: bis zum Timer-Ablauf könnte ein paralleles
+  // Neuladen der DJ-Liste den Cache mit dem alten Serverstand überschreiben
+  const priceToSave = dj.price;
   clearTimeout(priceSaveTimer);
   priceSaveTimer = setTimeout(async () => {
     try {
-      Object.assign(dj, await apiPatch(`/djs/${dj.id}`, { price: dj.price }));
+      Object.assign(dj, await apiPatch(`/djs/${dj.id}`, { price: priceToSave }));
     } catch(err){
       showToast("Preis speichern fehlgeschlagen: " + err.message);
     }
@@ -2968,9 +2979,10 @@ async function submitReview(){
 
   closeOverlay("overlay-write-review");
   renderDjList();
-  // Je nachdem, von wo aus die Bewertung gestartet wurde, die passende Ansicht neu rendern
-  if(document.getElementById("overlay-dj-detail").classList.contains("open")) openDjDetail(djId);
-  if(document.getElementById("overlay-dj-profile").classList.contains("open")) openDjProfile(djId);
+  // Je nachdem, von wo aus die Bewertung gestartet wurde, die passende Ansicht
+  // direkt aus dem (soeben frisch geladenen) Cache neu rendern
+  if(document.getElementById("overlay-dj-detail").classList.contains("open")) renderDjDetailBody(getDj(djId));
+  if(document.getElementById("overlay-dj-profile").classList.contains("open")) renderDjProfileBody(getDj(djId));
   showToast("Danke für deine Bewertung! ⭐");
 }
 
@@ -3184,10 +3196,14 @@ function updateSettingsName(){
   events.forEach(e => { e.lineup = e.lineup.map(n => n === oldName ? dj.name : n); });
   refreshAllAvatarDependentViews();
 
+  // Wert beim Planen einfangen: refreshAllAvatarDependentViews() lädt die
+  // DJ-Liste neu und würde dj.name sonst vor dem PATCH mit dem alten
+  // Serverstand überschreiben
+  const nameToSave = dj.name;
   clearTimeout(nameSaveTimer);
   nameSaveTimer = setTimeout(async () => {
     try {
-      Object.assign(dj, await apiPatch(`/djs/${dj.id}`, { name: dj.name }));
+      Object.assign(dj, await apiPatch(`/djs/${dj.id}`, { name: nameToSave }));
       // Die API liefert Lineups über die DJ-IDs, daher Events frisch laden
       await loadEvents();
       renderMap();
@@ -3207,10 +3223,12 @@ function updateSettingsBio(){
   if(!dj) return;
   dj.bio = val;
 
+  // Wert beim Planen einfangen (siehe Kommentar in updateSettingsName)
+  const bioToSave = dj.bio;
   clearTimeout(bioSaveTimer);
   bioSaveTimer = setTimeout(async () => {
     try {
-      Object.assign(dj, await apiPatch(`/djs/${dj.id}`, { bio: dj.bio }));
+      Object.assign(dj, await apiPatch(`/djs/${dj.id}`, { bio: bioToSave }));
     } catch(err){
       showToast("Bio speichern fehlgeschlagen: " + err.message);
     }
