@@ -848,7 +848,7 @@
       <div class="post-composer">
         <h4 style="margin:0 0 10px; font-size:13px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px;">Neuen Beitrag / Gig ankündigen</h4>
         <textarea id="new-post-text" placeholder="Was gibt's Neues? z.B. neuer Gig, neuer Mix…"></textarea>
-        <button class="btn btn-primary" id="post-submit-btn" onclick="postAnnouncement()">Posten</button>
+        <button class="btn btn-primary" onclick="postAnnouncement()">Posten</button>
       </div>
 
       <div class="section-title">Deine kommenden Gigs</div>
@@ -970,7 +970,7 @@
         <!-- Schritt 3: Übersicht & Senden -->
         <div id="booking-step-3" style="display:none;">
           <div class="info-block" id="booking-summary"></div>
-          <button class="btn btn-primary" id="booking-submit-btn" onclick="submitBooking()">Anfrage senden</button>
+          <button class="btn btn-primary" onclick="submitBooking()">Anfrage senden</button>
         </div>
 
       </div>
@@ -1070,7 +1070,7 @@
           <label>Kurzbeschreibung (optional)</label>
           <textarea id="spontan-description" placeholder="Was erwartet die Gäste?"></textarea>
         </div>
-        <button class="btn btn-primary" id="spontan-submit-btn" onclick="submitSpontaneousEvent()">🚨 Event ankündigen</button>
+        <button class="btn btn-primary" onclick="submitSpontaneousEvent()">🚨 Event ankündigen</button>
       </div>
     </section>
 
@@ -1218,13 +1218,6 @@
 <script>
 /* =======================================================================
    MOCK-DATEN
-
-   Diese Daten sind NICHT mehr die Laufzeit-Datenquelle der App: Beim
-   App-Start werden djs, bookingRequests, feedPosts, events und
-   chatMessages durch die Antworten der REST-API ersetzt (siehe Abschnitt
-   API-ANBINDUNG weiter unten). Die Mock-Blöcke bleiben hier stehen, weil
-   das Seed-Script des Backends (backend/scripts/seed.js, `npm run seed`)
-   sie ausliest und damit die SQLite-Datenbank befüllt.
    ======================================================================= */
 
 // Sammlung wiederverwendbarer SVG-Icon-Pfade (werden per JS in Elemente eingesetzt)
@@ -1247,7 +1240,7 @@ const ICONS = {
 // 6 DJs mit realistischen Beispieldaten
 // isPro: BeatSpot-Pro-Abo aktiv? | sponsored: erscheint als "Gesponsert"-Anzeige in der Suche
 // blockedDates: vom DJ manuell blockierte Tage (ISO-Format), siehe Kalenderfunktion
-let djs = [
+const djs = [
   { id: 1, name: "DJ Nova", genre: "Techno", genres: ["Techno", "House"], price: 120, rating: 4.8, city: "Berlin",
     color: "linear-gradient(135deg,#ff2ee6,#8a3ffc)", available: true, isPro: false, sponsored: false,
     blockedDates: ["2026-07-10", "2026-07-11", "2026-07-25"], avatarEmoji: null,
@@ -1319,8 +1312,7 @@ let djs = [
 ];
 
 // IDs der DJs, die als "Gesponsert" in der Suchliste beworben werden
-// (wird nach jedem Laden der DJs aus der API neu berechnet)
-let SPONSORED_DJ_IDS = djs.filter(d => d.sponsored).map(d => d.id);
+const SPONSORED_DJ_IDS = djs.filter(d => d.sponsored).map(d => d.id);
 
 // Werbe-Post im Feed (Anzeige, unabhängig von gefolgten DJs)
 const feedAd = {
@@ -1363,7 +1355,7 @@ let privateLocations = [
 ];
 
 // 5 Events für die Party-Karte
-let events = [
+const events = [
   { id: 1, name: "Neon Nights", location: "Warehouse 9", city: "Berlin", dayLabel: "Heute", time: "23:00", lineup: ["DJ Nova", "Nightshade"], entry: 15, x: 25, y: 38 },
   { id: 2, name: "Sunset Sessions", location: "Rooftop Club", city: "Hamburg", dayLabel: "Heute", time: "22:00", lineup: ["Luna Beats"], entry: 10, x: 68, y: 22 },
   { id: 3, name: "Beat Explosion", location: "Halle 2", city: "München", dayLabel: "Morgen", time: "21:30", lineup: ["MC Solstice", "Electra Vibe"], entry: 20, x: 47, y: 62 },
@@ -1430,12 +1422,14 @@ const AUTO_REPLIES = [
 const state = {
   role: "user",              // "user" oder "dj"
   currentTab: 1,
-  followed: new Set([1, 2]), // Nutzer folgt anfangs DJ Nova & Luna Beats (Session-Zustand;
-                             // die Follower-Zahl selbst wird am Backend mitgeführt)
+  followed: new Set([1, 2]), // Nutzer folgt anfangs DJ Nova & Luna Beats
   selectedGenres: new Set(),
   loggedInDjId: 1,           // Demo: eingeloggter DJ ist "DJ Nova"
   booking: { djId: null, date: "", time: "", duration: 4, type: "", genre: "", message: "", locationId: null },
-  nextLocationId: 4,         // nur noch für private Locations (bewusst ohne Backend, s.u.)
+  nextRequestId: 4,
+  nextPostId: 6,
+  nextEventId: 6,
+  nextLocationId: 4,
   calendarMonth: { year: 2026, month: 6 }, // 0-indexiert: Juli = 6, Startmonat lt. aktuellem Datum
   activeChatRequestId: null,
   selectedLocationAmenities: new Set(),
@@ -1454,137 +1448,6 @@ const state = {
 
 function getDj(id){ return djs.find(d => d.id === id); }
 function formatFollowers(n){ return n >= 1000 ? (n/1000).toFixed(1).replace(".0","") + "k" : n; }
-
-/* =======================================================================
-   API-ANBINDUNG (Node.js/Express/SQLite-Backend, siehe Ordner backend/)
-
-   Backend starten:  cd backend && npm install && npm run seed && npm start
-
-   Die lokalen Arrays (djs, bookingRequests, feedPosts, events,
-   chatMessages) dienen zur Laufzeit nur noch als Render-Cache: Sie werden
-   beim App-Start und nach jeder schreibenden Aktion mit den Antworten der
-   REST-API gefüllt, alle render*()-Funktionen lesen daraus.
-   ======================================================================= */
-const API_BASE = "http://localhost:3000/api";
-
-// Zentraler fetch-Wrapper: sendet/empfängt JSON und übersetzt Fehler in
-// Exceptions mit der Fehlermeldung des Backends ({ "error": ... })
-async function apiFetch(path, { method = "GET", body } = {}){
-  let response;
-  try {
-    response = await fetch(API_BASE + path, {
-      method,
-      headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
-  } catch {
-    // Netzwerkfehler: Server läuft nicht oder ist nicht erreichbar
-    throw new Error("Backend nicht erreichbar – läuft der Server (backend/, npm start)?");
-  }
-  if(!response.ok){
-    const data = await response.json().catch(() => null);
-    throw new Error((data && data.error) || ("HTTP " + response.status));
-  }
-  return response.status === 204 ? null : response.json();
-}
-
-// Kurzformen für die verwendeten HTTP-Methoden
-function apiGet(path){ return apiFetch(path); }
-function apiPost(path, body){ return apiFetch(path, { method: "POST", body }); }
-function apiPatch(path, body){ return apiFetch(path, { method: "PATCH", body }); }
-
-/* ---- Zeitformat-Helfer (SQL-Zeitstempel des Backends -> Anzeigetexte) --- */
-
-// Das Backend speichert UTC-Zeitstempel im Format "YYYY-MM-DD HH:MM:SS"
-function parseSqlDatetime(sql){
-  return new Date(sql.replace(" ", "T") + "Z");
-}
-
-// Relative Zeitangabe für Feed-Posts, z.B. "gerade eben", "vor 2 Std."
-function formatRelativeTime(createdAt){
-  const minutes = Math.floor((Date.now() - parseSqlDatetime(createdAt).getTime()) / 60000);
-  if(minutes < 1) return "gerade eben";
-  if(minutes < 60) return `vor ${minutes} Min.`;
-  const hours = Math.floor(minutes / 60);
-  if(hours < 24) return `vor ${hours} Std.`;
-  const days = Math.floor(hours / 24);
-  return days === 1 ? "vor 1 Tag" : `vor ${days} Tagen`;
-}
-
-// Zeitangabe für Chat-Nachrichten, z.B. "gerade eben", "14:02", "Gestern, 14:02"
-function formatMessageTime(createdAt){
-  const date = parseSqlDatetime(createdAt);
-  if(Date.now() - date.getTime() < 60000) return "gerade eben";
-  const clock = date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
-  const sameDay = (a, b) => a.toDateString() === b.toDateString();
-  if(sameDay(date, new Date())) return clock;
-  if(sameDay(date, new Date(Date.now() - 86400000))) return "Gestern, " + clock;
-  return date.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) + ", " + clock;
-}
-
-/* ---- Ladehinweise im Stil der bestehenden Empty-States ------------------ */
-function loadingHTML(){
-  return `<div class="empty-state"><p>Lädt…</p></div>`;
-}
-function errorHTML(){
-  return `<div class="empty-state"><p>Daten konnten nicht geladen werden.</p></div>`;
-}
-
-/* ---- Lade-Funktionen: API-Antworten in den lokalen Render-Cache --------- */
-
-// Frische DJ-Daten in den Cache übernehmen, ohne Objektreferenzen zu
-// zerstören; bereits nachgeladene reviews bleiben erhalten, solange die
-// Antwort keine eigenen mitbringt (die Suchliste liefert keine reviews)
-function mergeDjIntoCache(fresh){
-  const cached = djs.find(d => d.id === fresh.id);
-  if(cached){ Object.assign(cached, fresh); return cached; }
-  djs.push(fresh);
-  return fresh;
-}
-
-// Alle DJs (ungefiltert) laden – Basis für Filterchips, Avatare, Kalender usw.
-async function loadDjs(){
-  const list = await apiGet("/djs");
-  list.forEach(mergeDjIntoCache);
-  djs = djs.filter(d => list.some(fresh => fresh.id === d.id));
-  SPONSORED_DJ_IDS = djs.filter(d => d.sponsored).map(d => d.id);
-}
-
-// DJ-Detail inkl. Bewertungen (reviews) laden und in den Cache mergen
-async function loadDjDetail(id){
-  return mergeDjIntoCache(await apiGet(`/djs/${id}`));
-}
-
-// Buchungsanfragen laden. locationId (gewählte private Location) existiert
-// nur clientseitig und wird deshalb beim Neuladen aus dem Cache bewahrt.
-async function loadBookings(){
-  const list = await apiGet("/bookings");
-  bookingRequests = list.map(fresh => {
-    const cached = bookingRequests.find(r => r.id === fresh.id);
-    return cached && cached.locationId ? { ...fresh, locationId: cached.locationId } : fresh;
-  });
-}
-
-// Events der Party-Karte laden
-async function loadEvents(){
-  events = await apiGet("/events");
-}
-
-// Feed-Beiträge laden; createdAt wird für die Anzeige in die gewohnte
-// relative Zeitangabe übersetzt (Feldname time wie im bisherigen Mock)
-async function loadFeedPosts(){
-  feedPosts = (await apiGet("/posts")).map(p => ({ ...p, time: formatRelativeTime(p.createdAt) }));
-}
-
-// Chatverlauf einer Buchung laden (Feldname time wie im bisherigen Mock)
-async function loadChatMessages(bookingId){
-  const msgs = await apiGet(`/bookings/${bookingId}/messages`);
-  chatMessages[bookingId] = msgs.map(m => ({
-    sender: m.sender,
-    text: m.text,
-    time: formatMessageTime(m.createdAt),
-  }));
-}
 
 /* =======================================================================
    AVATAR-HILFSFUNKTIONEN (Farbverlauf + Emoji/Initialen, siehe Profileinstellungen)
@@ -1623,16 +1486,35 @@ function reviewerAvatarHTML(r){
 }
 
 // Ist der eingeloggte Demo-DJ Pro-Mitglied? Dann ist die App für ihn werbefrei.
-// (Guard: solange die DJ-Daten noch nicht geladen sind, gibt es keinen Pro-Status)
-function isAdFreeActive(){
-  const dj = getDj(state.loggedInDjId);
-  return !!dj && dj.isPro === true;
-}
+function isAdFreeActive(){ return getDj(state.loggedInDjId).isPro === true; }
 
 /* =======================================================================
    INITIALISIERUNG
    ======================================================================= */
-async function init(){
+function init(){
+  // Städte-Filter dynamisch aus den DJ-Daten befüllen
+  const citySelect = document.getElementById("filter-city");
+  [...new Set(djs.map(d => d.city))].forEach(city => {
+    const opt = document.createElement("option");
+    opt.value = city; opt.textContent = city;
+    citySelect.appendChild(opt);
+  });
+
+  // Genre-Chips dynamisch erzeugen
+  const genreRow = document.getElementById("genre-chip-row");
+  const allGenres = [...new Set(djs.flatMap(d => d.genres))];
+  allGenres.forEach(g => {
+    const chip = document.createElement("button");
+    chip.className = "chip";
+    chip.textContent = g;
+    chip.onclick = () => {
+      state.selectedGenres.has(g) ? state.selectedGenres.delete(g) : state.selectedGenres.add(g);
+      chip.classList.toggle("selected");
+      renderDjList();
+    };
+    genreRow.appendChild(chip);
+  });
+
   // Event-Typ-Auswahl im Buchungsflow erzeugen
   const typeGrid = document.getElementById("event-type-grid");
   EVENT_TYPES.forEach(type => {
@@ -1684,48 +1566,6 @@ async function init(){
     if(Math.abs(dx) > 50){ dx < 0 ? storyNext() : storyPrev(); }
   });
 
-  applyRoleToNav();
-  switchTab(1); // Start-Ansicht: Tab 1 aktiv setzen
-
-  // Ladehinweise anzeigen, solange die API-Antworten ausstehen
-  ["dj-list", "feed-list", "my-requests-list", "request-list", "tonight-list"].forEach(id => {
-    document.getElementById(id).innerHTML = loadingHTML();
-  });
-
-  // Alle Daten vom Backend laden; die Mock-Arrays werden dabei ersetzt.
-  // Schlägt das Laden fehl, bleibt die App mit leeren Zuständen bedienbar.
-  try {
-    await Promise.all([loadDjs(), loadBookings(), loadEvents(), loadFeedPosts()]);
-    await loadDjDetail(state.loggedInDjId); // Bewertungen für das eigene DJ-Profil
-  } catch(err){
-    djs = []; bookingRequests = []; events = []; feedPosts = []; chatMessages = {};
-    SPONSORED_DJ_IDS = [];
-    showToast("Fehler beim Laden: " + err.message);
-  }
-
-  // Städte-Filter dynamisch aus den geladenen DJ-Daten befüllen
-  const citySelect = document.getElementById("filter-city");
-  [...new Set(djs.map(d => d.city))].forEach(city => {
-    const opt = document.createElement("option");
-    opt.value = city; opt.textContent = city;
-    citySelect.appendChild(opt);
-  });
-
-  // Genre-Chips dynamisch aus den geladenen DJ-Daten erzeugen
-  const genreRow = document.getElementById("genre-chip-row");
-  const allGenres = [...new Set(djs.flatMap(d => d.genres))];
-  allGenres.forEach(g => {
-    const chip = document.createElement("button");
-    chip.className = "chip";
-    chip.textContent = g;
-    chip.onclick = () => {
-      state.selectedGenres.has(g) ? state.selectedGenres.delete(g) : state.selectedGenres.add(g);
-      chip.classList.toggle("selected");
-      renderDjList();
-    };
-    genreRow.appendChild(chip);
-  });
-
   renderDjList();
   renderFollowScroll();
   renderFeed();
@@ -1736,6 +1576,8 @@ async function init(){
   renderMyRequests();
   renderSelfProfile();
   renderCalendar();
+  applyRoleToNav();
+  switchTab(1); // Start-Ansicht: Tab 1 aktiv setzen
 }
 
 /* =======================================================================
@@ -1807,57 +1649,29 @@ function toggleFilterPanel(){
   document.getElementById("filter-toggle-btn").classList.toggle("active");
 }
 
-// Laufende Nummer der Suchanfragen: Antworten, die zu einer inzwischen
-// überholten Anfrage gehören, werden verworfen (Race beim schnellen Tippen)
-let djSearchToken = 0;
-
-async function renderDjList(){
+function renderDjList(){
   const query = document.getElementById("search-input").value.trim().toLowerCase();
   const priceFilter = document.getElementById("filter-price").value;
   const cityFilter = document.getElementById("filter-city").value;
   const onlyAvailable = document.getElementById("filter-available").checked;
-  const container = document.getElementById("dj-list");
 
-  // Serverseitige Filter der DJ-Suche (GET /api/djs?city=…&available=…&genre=…)
-  const params = new URLSearchParams();
-  if(cityFilter !== "all") params.set("city", cityFilter);
-  if(onlyAvailable) params.set("available", "true");
-  state.selectedGenres.forEach(g => params.append("genre", g));
-
-  // Ladehinweis nur beim ersten Aufbau; danach bleibt die bisherige Liste
-  // sichtbar, bis die neue Antwort da ist (kein Flackern beim Tippen)
-  if(!container.querySelector(".dj-card")) container.innerHTML = loadingHTML();
-
-  const token = ++djSearchToken;
-  let list;
-  try {
-    list = await apiGet("/djs?" + params.toString());
-  } catch(err){
-    if(token !== djSearchToken) return;
-    container.innerHTML = errorHTML();
-    showToast("DJ-Suche fehlgeschlagen: " + err.message);
-    return;
-  }
-  if(token !== djSearchToken) return; // veraltete Antwort verwerfen
-
-  // Cache aktuell halten (Avatare, Kalender & Co. lesen daraus)
-  list = list.map(mergeDjIntoCache);
-
-  // Freitext (Name ODER Haupt-Genre) und Preisspanne kennt die API so
-  // nicht – diese beiden Filter laufen wie bisher clientseitig
-  list = list.filter(dj => {
+  let list = djs.filter(dj => {
     const matchesQuery = !query || dj.name.toLowerCase().includes(query) || dj.genre.toLowerCase().includes(query);
+    const matchesGenre = state.selectedGenres.size === 0 || dj.genres.some(g => state.selectedGenres.has(g));
+    const matchesCity = cityFilter === "all" || dj.city === cityFilter;
+    const matchesAvailability = !onlyAvailable || dj.available;
     let matchesPrice = true;
     if(priceFilter !== "all"){
       const [min, max] = priceFilter.split("-").map(Number);
       matchesPrice = dj.price >= min && dj.price <= max;
     }
-    return matchesQuery && matchesPrice;
+    return matchesQuery && matchesGenre && matchesCity && matchesAvailability && matchesPrice;
   });
 
   // Pro-DJs werden in der Suchliste nach oben priorisiert (echter Vorteil des Pro-Abos)
   list = [...list].sort((a, b) => (b.isPro ? 1 : 0) - (a.isPro ? 1 : 0));
 
+  const container = document.getElementById("dj-list");
   container.innerHTML = "";
 
   if(list.length === 0){
@@ -1900,24 +1714,10 @@ function buildDjCard(dj, isAd){
   return card;
 }
 
-async function openDjDetail(id){
+function openDjDetail(id){
+  const dj = getDj(id);
   const body = document.getElementById("dj-detail-body");
-  body.innerHTML = loadingHTML();
-  openOverlay("overlay-dj-detail");
-
-  // Detail inkl. Bewertungen (reviews) frisch von der API laden
-  try {
-    renderDjDetailBody(await loadDjDetail(id));
-  } catch(err){
-    body.innerHTML = errorHTML();
-    showToast("DJ-Profil konnte nicht geladen werden: " + err.message);
-  }
-}
-
-// Baut die Detailansicht aus dem (bereits geladenen) Cache-Objekt auf –
-// nach Aktionen wie einer neuen Bewertung genügt so ein direkter Re-Render
-function renderDjDetailBody(dj){
-  document.getElementById("dj-detail-body").innerHTML = `
+  body.innerHTML = `
     <div class="profile-hero">
       <div class="avatar round" style="background:${avatarBg(dj)};">${avatarContent(dj)}</div>
       <h3>${dj.name}</h3>
@@ -1948,6 +1748,7 @@ function renderDjDetailBody(dj){
 
     <button class="btn btn-primary" onclick="startBooking(${dj.id})">Jetzt buchen</button>
   `;
+  openOverlay("overlay-dj-detail");
 }
 
 /* =======================================================================
@@ -2074,55 +1875,42 @@ function renderBookingSummary(){
   `;
 }
 
-async function submitBooking(){
+function submitBooking(){
   const b = state.booking;
   const dj = getDj(b.djId);
-  const submitBtn = document.getElementById("booking-submit-btn");
-  submitBtn.disabled = true;
-  submitBtn.textContent = "Wird gesendet…";
 
-  // Buchungsanfrage am Backend anlegen; der Anfragesteller ist die
-  // Demo-Persona "Du" (requesterName legt Nutzer:in bei Bedarf an)
-  let request;
-  try {
-    request = await apiPost("/bookings", {
-      djId: b.djId,
-      eventType: b.type || "Sonstiges",
-      date: b.date || CURRENT_DATE_STR,
-      time: b.time,
-      duration: b.duration,
-      genre: b.genre,
-      location: resolveBookingLocationText(b.locationId),
-      message: b.message,
-      requesterName: "Du",
-    });
-  } catch(err){
-    showToast("Anfrage fehlgeschlagen: " + err.message);
-    return;
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = "Anfrage senden";
-  }
-
-  // In den Cache übernehmen; locationId (gewählte private Location)
-  // existiert nur clientseitig und wird der API-Antwort beigelegt
-  bookingRequests.unshift({ ...request, locationId: b.locationId });
+  // Neue Anfrage im Mock-Datensatz der Buchungsanfragen ablegen,
+  // damit sie – falls der gebuchte DJ die Demo-DJ-Rolle ist – dort sichtbar wird
+  const newRequestId = state.nextRequestId++;
+  bookingRequests.unshift({
+    id: newRequestId,
+    djId: b.djId,
+    requester: "Du",
+    eventType: b.type || "Sonstiges",
+    date: b.date || "2026-07-02",
+    time: b.time,
+    duration: b.duration,
+    genre: b.genre,
+    location: resolveBookingLocationText(b.locationId),
+    locationId: b.locationId,
+    message: b.message,
+    status: "offen",
+  });
   renderDjRequests();
   renderMyRequests();
 
-  // Bestätigungsansicht aus den Daten der API-Antwort aufbauen
-  const dateFormatted = request.date
-    ? new Date(request.date).toLocaleDateString("de-DE", {weekday:"short", day:"2-digit", month:"long"})
+  const dateFormatted = b.date
+    ? new Date(b.date).toLocaleDateString("de-DE", {weekday:"short", day:"2-digit", month:"long"})
     : "–";
-  const estimatedPrice = request.duration * dj.price;
+  const estimatedPrice = b.duration * dj.price;
   document.getElementById("confirmation-summary").innerHTML = `
     <div class="booking-summary-row"><span class="lbl">DJ</span><span>${dj.name}</span></div>
     <div class="booking-summary-row"><span class="lbl">Datum</span><span>${dateFormatted}</span></div>
-    <div class="booking-summary-row"><span class="lbl">Uhrzeit</span><span>${request.time} Uhr</span></div>
-    <div class="booking-summary-row"><span class="lbl">Dauer</span><span>${request.duration} Std.</span></div>
-    <div class="booking-summary-row"><span class="lbl">Event-Typ</span><span>${request.eventType || "–"}</span></div>
-    <div class="booking-summary-row"><span class="lbl">Genre</span><span>${request.genre || "–"}</span></div>
-    <div class="booking-summary-row"><span class="lbl">Veranstaltungsort</span><span style="text-align:right; max-width:60%;">${request.location}</span></div>
+    <div class="booking-summary-row"><span class="lbl">Uhrzeit</span><span>${b.time} Uhr</span></div>
+    <div class="booking-summary-row"><span class="lbl">Dauer</span><span>${b.duration} Std.</span></div>
+    <div class="booking-summary-row"><span class="lbl">Event-Typ</span><span>${b.type || "–"}</span></div>
+    <div class="booking-summary-row"><span class="lbl">Genre</span><span>${b.genre || "–"}</span></div>
+    <div class="booking-summary-row"><span class="lbl">Veranstaltungsort</span><span style="text-align:right; max-width:60%;">${resolveBookingLocationText(b.locationId)}</span></div>
     <div class="booking-summary-row"><span class="lbl">Preis (geschätzt)</span><span class="price-tag">${estimatedPrice} €</span></div>
   `;
   closeOverlay("overlay-booking");
@@ -2218,62 +2006,23 @@ function buildAdCard(){
   return el;
 }
 
-async function toggleLike(postId){
+function toggleLike(postId){
   const post = feedPosts.find(p => p.id === postId);
-  if(!post) return;
-
-  // Like-Zustand am Backend umschalten (passt die Like-Anzahl mit an)
-  let fresh;
-  try {
-    fresh = await apiPatch(`/posts/${postId}`, { liked: !post.liked });
-  } catch(err){
-    showToast("Like fehlgeschlagen: " + err.message);
-    return;
-  }
-  Object.assign(post, fresh, { time: formatRelativeTime(fresh.createdAt) });
+  post.liked = !post.liked;
+  post.likes += post.liked ? 1 : -1;
   renderFeed();
 }
 
-async function toggleFollow(djId){
-  const dj = getDj(djId);
-  if(!dj) return;
-  const willFollow = !state.followed.has(djId);
-
-  // Die Follower-Zahl des DJs wird am Backend mitgeführt; wem die
-  // Demo-Persona folgt, bleibt Session-Zustand (state.followed)
-  try {
-    const fresh = await apiPatch(`/djs/${djId}`, { followers: dj.followers + (willFollow ? 1 : -1) });
-    Object.assign(dj, fresh);
-  } catch(err){
-    showToast("Folgen fehlgeschlagen: " + err.message);
-    return;
-  }
-  willFollow ? state.followed.add(djId) : state.followed.delete(djId);
+function toggleFollow(djId){
+  state.followed.has(djId) ? state.followed.delete(djId) : state.followed.add(djId);
   renderFollowScroll();
   renderFeed();
-  // Ansicht mit aktualisiertem Button direkt aus dem Cache neu rendern
-  // (die Bewertungen wurden beim Öffnen des Profils bereits geladen)
-  renderDjProfileBody(dj);
+  openDjProfile(djId); // Ansicht mit aktualisiertem Button neu rendern
 }
 
-async function openDjProfile(djId){
-  const body = document.getElementById("dj-profile-body");
-  body.innerHTML = loadingHTML();
-  openOverlay("overlay-dj-profile");
-
-  // Detail inkl. Bewertungen (reviews) frisch von der API laden
-  try {
-    renderDjProfileBody(await loadDjDetail(djId));
-  } catch(err){
-    body.innerHTML = errorHTML();
-    showToast("DJ-Profil konnte nicht geladen werden: " + err.message);
-  }
-}
-
-// Baut die Profilansicht aus dem (bereits geladenen) Cache-Objekt auf –
-// nach Folgen/Bewerten genügt so ein direkter Re-Render ohne Ladehinweis
-function renderDjProfileBody(dj){
-  const isFollowed = state.followed.has(dj.id);
+function openDjProfile(djId){
+  const dj = getDj(djId);
+  const isFollowed = state.followed.has(djId);
   const upcoming = events.filter(e => e.lineup.includes(dj.name));
 
   document.getElementById("dj-profile-body").innerHTML = `
@@ -2282,8 +2031,7 @@ function renderDjProfileBody(dj){
       <h3>${dj.name}</h3>
       <div class="genre">${dj.city}</div>
       <div class="stat-row">
-        <!-- Die Follower-Zahl enthält das eigene Folgen bereits (PATCH in toggleFollow) -->
-        <div class="stat"><div class="num">${formatFollowers(dj.followers)}</div><div class="lbl">Follower</div></div>
+        <div class="stat"><div class="num">${formatFollowers(dj.followers + (isFollowed?1:0))}</div><div class="lbl">Follower</div></div>
         <div class="stat"><div class="num">${dj.rating} ★</div><div class="lbl">Bewertung</div></div>
       </div>
       <div class="tag-row">${dj.genres.map(g => `<span class="tag">${g}</span>`).join("")}</div>
@@ -2317,6 +2065,7 @@ function renderDjProfileBody(dj){
       ${buildReviewsSectionHTML(dj, false)}
     </div>
   `;
+  openOverlay("overlay-dj-profile");
 }
 
 // Wechselt innerhalb des Feed-Tabs zwischen "Feed" und "Meine Anfragen"
@@ -2344,20 +2093,19 @@ function renderMyRequests(){
 
   mine.forEach(req => {
     const dj = getDj(req.djId);
-    const djName = dj ? dj.name : req.djName; // djName liefert die API als Fallback mit
     const dateFormatted = new Date(req.date).toLocaleDateString("de-DE", {day:"2-digit", month:"2-digit", year:"numeric"});
     const el = document.createElement("div");
     el.className = "request-card";
     el.innerHTML = `
       <div class="request-top">
-        <span class="n">${djName}</span>
+        <span class="n">${dj.name}</span>
         <span class="status-badge ${req.status}">${req.status === "bestaetigt" ? "Bestätigt" : req.status === "abgelehnt" ? "Abgelehnt" : "Offen"}</span>
       </div>
       <div class="request-details">
         <div><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ICONS.clock}</svg> ${req.eventType} · ${req.genre} · ${req.duration} Std. · ${dateFormatted}, ${req.time} Uhr</div>
         <div><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ICONS.location}</svg> ${req.location}</div>
       </div>
-      <button class="btn btn-outline btn-sm" style="width:100%;" onclick="openChat(${req.id})">💬 Chat mit ${djName}</button>
+      <button class="btn btn-outline btn-sm" style="width:100%;" onclick="openChat(${req.id})">💬 Chat mit ${dj.name}</button>
     `;
     container.appendChild(el);
   });
@@ -2374,8 +2122,7 @@ function formatEventPlace(ev){
 function renderMap(){
   const canvas = document.getElementById("map-canvas");
   canvas.innerHTML = "";
-  const selfDj = getDj(state.loggedInDjId);
-  const selfDjName = selfDj ? selfDj.name : null;
+  const selfDjName = getDj(state.loggedInDjId).name;
 
   events.forEach(ev => {
     const isMine = ev.lineup.includes(selfDjName);
@@ -2451,8 +2198,7 @@ function openEventDetail(id){
    TAB 1 (DJ-Rolle): BUCHUNGSANFRAGEN
    ======================================================================= */
 function renderDjRequests(){
-  const selfDj = getDj(state.loggedInDjId);
-  document.getElementById("loggedin-dj-name-1").textContent = selfDj ? selfDj.name : "–";
+  document.getElementById("loggedin-dj-name-1").textContent = getDj(state.loggedInDjId).name;
   const container = document.getElementById("request-list");
   const myRequests = bookingRequests.filter(r => r.djId === state.loggedInDjId);
   container.innerHTML = "";
@@ -2492,17 +2238,9 @@ function renderDjRequests(){
   });
 }
 
-async function updateRequestStatus(id, status){
-  // Status am Backend ändern und die Antwort in den Cache übernehmen
-  let fresh;
-  try {
-    fresh = await apiPatch(`/bookings/${id}`, { status });
-  } catch(err){
-    showToast("Statuswechsel fehlgeschlagen: " + err.message);
-    return;
-  }
+function updateRequestStatus(id, status){
   const req = bookingRequests.find(r => r.id === id);
-  if(req) Object.assign(req, fresh);
+  req.status = status;
   renderDjRequests();
   renderMyRequests();
   renderCalendar(); // bestätigte Buchungen blockieren den Tag automatisch im Kalender
@@ -2514,7 +2252,6 @@ async function updateRequestStatus(id, status){
    ======================================================================= */
 function renderSelfProfile(){
   const dj = getDj(state.loggedInDjId);
-  if(!dj) return; // DJ-Daten (noch) nicht geladen
   document.getElementById("dj-self-avatar").style.background = avatarBg(dj);
   document.getElementById("dj-self-avatar").textContent = avatarContent(dj);
   document.getElementById("dj-self-name").innerHTML = dj.name + (dj.isPro ? ' <span class="badge-pro">PRO</span>' : '');
@@ -2527,27 +2264,11 @@ function renderSelfProfile(){
   document.getElementById("dj-self-reviews").innerHTML = buildReviewsSectionHTML(dj, true);
 }
 
-// Live-Übernahme des Preises aus dem DJ-Tab (Bio/Name/Avatar: siehe Profileinstellungen).
-// Die Anzeige folgt sofort; gespeichert wird gebündelt per PATCH ans Backend,
-// weil das Eingabefeld sonst bei jedem Tastendruck einen Request auslösen würde.
-let priceSaveTimer;
+// Live-Übernahme des Preises aus dem DJ-Tab in die Mock-Daten (Bio/Name/Avatar: siehe Profileinstellungen)
 function updateSelfProfile(){
   const dj = getDj(state.loggedInDjId);
-  if(!dj) return;
   dj.price = Number(document.getElementById("edit-price").value) || dj.price;
   document.getElementById("dj-self-price").textContent = dj.price;
-
-  // Wert beim Planen einfangen: bis zum Timer-Ablauf könnte ein paralleles
-  // Neuladen der DJ-Liste den Cache mit dem alten Serverstand überschreiben
-  const priceToSave = dj.price;
-  clearTimeout(priceSaveTimer);
-  priceSaveTimer = setTimeout(async () => {
-    try {
-      Object.assign(dj, await apiPatch(`/djs/${dj.id}`, { price: priceToSave }));
-    } catch(err){
-      showToast("Preis speichern fehlgeschlagen: " + err.message);
-    }
-  }, 500);
 }
 
 function renderSelfGigs(){
@@ -2561,26 +2282,12 @@ function renderSelfGigs(){
     </div>`).join("") : `<p class="subtle-text">Aktuell keine geplanten Gigs.</p>`;
 }
 
-async function postAnnouncement(){
+function postAnnouncement(){
   const textarea = document.getElementById("new-post-text");
   const text = textarea.value.trim();
   if(!text) return;
 
-  const btn = document.getElementById("post-submit-btn");
-  btn.disabled = true;
-  btn.textContent = "Postet…";
-
-  // Beitrag am Backend anlegen und den Feed mit den API-Daten neu aufbauen
-  try {
-    await apiPost("/posts", { djId: state.loggedInDjId, text });
-    await loadFeedPosts();
-  } catch(err){
-    showToast("Posten fehlgeschlagen: " + err.message);
-    return;
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Posten";
-  }
+  feedPosts.unshift({ id: state.nextPostId++, djId: state.loggedInDjId, text, time: "gerade eben", likes: 0, liked: false });
   textarea.value = "";
   renderFeed();
   showToast("Beitrag veröffentlicht ✓");
@@ -2616,26 +2323,24 @@ function renderProOverlay(){
   `;
 }
 
-// Simulierter Abo-Abschluss: kein echtes Zahlungssystem, der Pro-Status
-// wird per PATCH am DJ-Datensatz des Backends gespeichert
-async function setProStatus(isPro, successMessage){
-  const dj = getDj(state.loggedInDjId);
-  if(!dj) return;
-  try {
-    Object.assign(dj, await apiPatch(`/djs/${dj.id}`, { isPro }));
-  } catch(err){
-    showToast("Abo-Änderung fehlgeschlagen: " + err.message);
-    return;
-  }
+// Simulierter Abo-Abschluss: kein echtes Zahlungssystem, nur Status im state
+function subscribePro(){
+  getDj(state.loggedInDjId).isPro = true;
   renderProOverlay();
   renderSelfProfile();
   renderDjList();
   renderFeed();
-  showToast(successMessage);
+  showToast("Willkommen bei BeatSpot Pro! 🚀");
 }
 
-function subscribePro(){ setProStatus(true, "Willkommen bei BeatSpot Pro! 🚀"); }
-function cancelPro(){ setProStatus(false, "Pro-Abo gekündigt"); }
+function cancelPro(){
+  getDj(state.loggedInDjId).isPro = false;
+  renderProOverlay();
+  renderSelfProfile();
+  renderDjList();
+  renderFeed();
+  showToast("Pro-Abo gekündigt");
+}
 
 /* =======================================================================
    KALENDER (DJ-Verfügbarkeit)
@@ -2644,7 +2349,6 @@ const CURRENT_DATE_STR = "2026-07-02"; // Referenzdatum für "vergangene Tage" i
 
 function renderCalendar(){
   const dj = getDj(state.loggedInDjId);
-  if(!dj) return; // DJ-Daten (noch) nicht geladen
   const { year, month } = state.calendarMonth;
   const monthNames = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
   document.getElementById("calendar-month-label").textContent = monthNames[month] + " " + year;
@@ -2693,35 +2397,28 @@ function changeCalendarMonth(delta){
   renderCalendar();
 }
 
-// Manuelles Blockieren/Freigeben eines Tages durch den DJ –
-// die blockierten Tage werden als Ganzes per PATCH am Backend gespeichert
-async function toggleBlockedDate(dateStr){
+// Manuelles Blockieren/Freigeben eines Tages durch den DJ
+function toggleBlockedDate(dateStr){
   const dj = getDj(state.loggedInDjId);
-  if(!dj) return;
-  const wasBlocked = dj.blockedDates.includes(dateStr);
-  const blockedDates = wasBlocked
-    ? dj.blockedDates.filter(d => d !== dateStr)
-    : [...dj.blockedDates, dateStr];
-
-  try {
-    Object.assign(dj, await apiPatch(`/djs/${dj.id}`, { blockedDates }));
-  } catch(err){
-    showToast("Kalender speichern fehlgeschlagen: " + err.message);
-    return;
+  const idx = dj.blockedDates.indexOf(dateStr);
+  if(idx === -1){
+    dj.blockedDates.push(dateStr);
+    showToast("Tag blockiert");
+  } else {
+    dj.blockedDates.splice(idx, 1);
+    showToast("Tag freigegeben");
   }
   renderCalendar();
-  showToast(wasBlocked ? "Tag freigegeben" : "Tag blockiert");
 }
 
 /* =======================================================================
    CHAT (pro Buchungsanfrage)
    ======================================================================= */
-async function openChat(requestId){
+function openChat(requestId){
   state.activeChatRequestId = requestId;
   const req = bookingRequests.find(r => r.id === requestId);
-  if(!req) return;
   const dj = getDj(req.djId);
-  const partnerName = state.role === "dj" ? displayName(req.requester) : (dj ? dj.name : req.djName);
+  const partnerName = state.role === "dj" ? displayName(req.requester) : dj.name;
   document.getElementById("chat-title").textContent = "Chat mit " + partnerName;
 
   // Bei ausgewählter privater Location einen kurzen Hinweis über dem Chatverlauf anzeigen
@@ -2734,18 +2431,10 @@ async function openChat(requestId){
     banner.style.display = "none";
   }
 
-  document.getElementById("chat-messages").innerHTML = loadingHTML();
+  if(!chatMessages[requestId]) chatMessages[requestId] = [];
+  renderChatMessages();
   document.getElementById("chat-input").value = "";
   openOverlay("overlay-chat");
-
-  // Chatverlauf vom Backend laden
-  try {
-    await loadChatMessages(requestId);
-  } catch(err){
-    if(!chatMessages[requestId]) chatMessages[requestId] = [];
-    showToast("Chat konnte nicht geladen werden: " + err.message);
-  }
-  if(state.activeChatRequestId === requestId) renderChatMessages();
 }
 
 function renderChatMessages(){
@@ -2758,7 +2447,7 @@ function renderChatMessages(){
     container.innerHTML = `<div class="empty-state" style="padding-top:60px;"><p>Noch keine Nachrichten. Schreib die erste!</p></div>`;
   } else {
     const req = bookingRequests.find(r => r.id === id);
-    const dj = req ? getDj(req.djId) : null;
+    const dj = getDj(req.djId);
     msgs.forEach(m => {
       const row = document.createElement("div");
       row.className = "chat-row " + (m.sender === state.role ? "mine" : "theirs");
@@ -2773,43 +2462,27 @@ function renderChatMessages(){
   container.scrollTop = container.scrollHeight;
 }
 
-async function sendChatMessage(){
+function sendChatMessage(){
   const input = document.getElementById("chat-input");
   const text = input.value.trim();
   if(!text) return;
 
   const id = state.activeChatRequestId;
-  input.value = "";
-
-  // Nachricht am Backend speichern und die Antwort in den Cache übernehmen
-  let message;
-  try {
-    message = await apiPost(`/bookings/${id}/messages`, { sender: state.role, text });
-  } catch(err){
-    input.value = text; // Eingabe zurückgeben, damit nichts verloren geht
-    showToast("Senden fehlgeschlagen: " + err.message);
-    return;
-  }
   if(!chatMessages[id]) chatMessages[id] = [];
-  chatMessages[id].push({ sender: message.sender, text: message.text, time: formatMessageTime(message.createdAt) });
-  if(state.activeChatRequestId === id) renderChatMessages();
+  chatMessages[id].push({ sender: state.role, text, time: "gerade eben" });
+  input.value = "";
+  renderChatMessages();
 
-  // Simulierte Antwort der Gegenseite nach kurzer Verzögerung, damit der
-  // Chat lebendig wirkt – ebenfalls über die API, damit der Verlauf
-  // vollständig in der Datenbank liegt
+  // Simulierte Antwort der Gegenseite nach kurzer Verzögerung, damit der Chat lebendig wirkt
   const replySender = state.role === "user" ? "dj" : "user";
-  setTimeout(async () => {
-    try {
-      const reply = await apiPost(`/bookings/${id}/messages`, {
-        sender: replySender,
-        text: AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)],
-      });
-      chatMessages[id].push({ sender: reply.sender, text: reply.text, time: formatMessageTime(reply.createdAt) });
-      if(state.activeChatRequestId === id && document.getElementById("overlay-chat").classList.contains("open")){
-        renderChatMessages();
-      }
-    } catch {
-      // Die simulierte Antwort ist rein dekorativ – Fehler hier still ignorieren
+  setTimeout(() => {
+    chatMessages[id].push({
+      sender: replySender,
+      text: AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)],
+      time: "gerade eben",
+    });
+    if(state.activeChatRequestId === id && document.getElementById("overlay-chat").classList.contains("open")){
+      renderChatMessages();
     }
   }, 1400);
 }
@@ -2835,7 +2508,7 @@ function computeDayLabel(dateStr){
   return weekday.replace(".", "");
 }
 
-async function submitSpontaneousEvent(){
+function submitSpontaneousEvent(){
   const name = document.getElementById("spontan-name").value.trim();
   const location = document.getElementById("spontan-location").value.trim();
   const date = document.getElementById("spontan-date").value || CURRENT_DATE_STR;
@@ -2849,40 +2522,33 @@ async function submitSpontaneousEvent(){
   }
 
   const dj = getDj(state.loggedInDjId);
-  if(!dj) return;
   const dayLabel = computeDayLabel(date);
-  const btn = document.getElementById("spontan-submit-btn");
-  btn.disabled = true;
-  btn.textContent = "Wird angekündigt…";
+  const newEvent = {
+    id: state.nextEventId++,
+    name,
+    location,
+    city: "", // bereits Teil des freien "Ort"-Textfelds
+    dayLabel,
+    time,
+    lineup: [dj.name],
+    entry: entryVal ? Number(entryVal) : 0,
+    description,
+    x: 15 + Math.random() * 65,
+    y: 18 + Math.random() * 58,
+    spontaneous: true,
+  };
+  events.push(newEvent);
 
-  // Event und Feed-Ankündigung am Backend anlegen, danach beide
-  // Datenbestände frisch aus der API übernehmen
+  // Automatische Ankündigung im Feed der Follower
   const dayText = dayLabel === "Heute" ? "heute Abend" : dayLabel === "Morgen" ? "morgen" : "am " + dayLabel;
-  try {
-    await apiPost("/events", {
-      name,
-      location,
-      city: "", // bereits Teil des freien "Ort"-Textfelds
-      date,
-      dayLabel,
-      time,
-      lineup: [dj.name],
-      entry: entryVal ? Number(entryVal) : 0,
-      description,
-      x: 15 + Math.random() * 65,
-      y: 18 + Math.random() * 58,
-      spontaneous: true,
-    });
-    // Automatische Ankündigung im Feed der Follower
-    await apiPost("/posts", { djId: dj.id, text: `🚨 Spontan ${dayText}: ${name} im ${location}!` });
-    await Promise.all([loadEvents(), loadFeedPosts()]);
-  } catch(err){
-    showToast("Ankündigen fehlgeschlagen: " + err.message);
-    return;
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "🚨 Event ankündigen";
-  }
+  feedPosts.unshift({
+    id: state.nextPostId++,
+    djId: dj.id,
+    text: `🚨 Spontan ${dayText}: ${name} im ${location}!`,
+    time: "gerade eben",
+    likes: 0,
+    liked: false,
+  });
 
   closeOverlay("overlay-spontaneous");
   renderMap();
@@ -2898,7 +2564,7 @@ async function submitSpontaneousEvent(){
 // Baut den kompletten Bewertungsbereich (Durchschnitt, Sterne-Verteilung, Einzelbewertungen).
 // readonly=true blendet den "Bewertung schreiben"-Button aus (z.B. im eigenen DJ-Profil).
 function buildReviewsSectionHTML(dj, readonly){
-  const reviews = dj.reviews || []; // reviews kommen erst mit dem DJ-Detail von der API
+  const reviews = dj.reviews;
   const total = reviews.length;
   const avg = total ? reviews.reduce((sum, r) => sum + r.stars, 0) / total : 0;
   const counts = [5, 4, 3, 2, 1].map(star => reviews.filter(r => r.stars === star).length);
@@ -2955,42 +2621,32 @@ function selectReviewStars(value){
   });
 }
 
-async function submitReview(){
+// Aktualisiert die Durchschnittsbewertung eines DJs anhand seiner aktuellen Bewertungen
+function recalcDjRating(dj){
+  const total = dj.reviews.length;
+  dj.rating = total ? Math.round((dj.reviews.reduce((s, r) => s + r.stars, 0) / total) * 10) / 10 : 0;
+}
+
+function submitReview(){
   if(state.newReviewStars === 0){
     showToast("Bitte wähle zuerst eine Sternebewertung.");
     return;
   }
-  const djId = state.reviewTargetDjId;
+  const dj = getDj(state.reviewTargetDjId);
   const comment = document.getElementById("review-comment").value.trim();
-
-  // Bewertung am Backend anlegen; die Durchschnittsbewertung des DJs
-  // (djs.rating) berechnet das Backend dabei automatisch neu
-  try {
-    await apiPost(`/djs/${djId}/ratings`, {
-      stars: state.newReviewStars,
-      comment: comment || "(kein Kommentar)",
-      authorName: "Du",
-    });
-    await loadDjDetail(djId); // frische Bewertungen + neuen Durchschnitt übernehmen
-  } catch(err){
-    showToast("Bewertung fehlgeschlagen: " + err.message);
-    return;
-  }
+  dj.reviews.unshift({ name: "Du", stars: state.newReviewStars, comment: comment || "(kein Kommentar)", date: CURRENT_DATE_STR });
+  recalcDjRating(dj);
 
   closeOverlay("overlay-write-review");
   renderDjList();
-  // Je nachdem, von wo aus die Bewertung gestartet wurde, die passende Ansicht
-  // direkt aus dem (soeben frisch geladenen) Cache neu rendern
-  if(document.getElementById("overlay-dj-detail").classList.contains("open")) renderDjDetailBody(getDj(djId));
-  if(document.getElementById("overlay-dj-profile").classList.contains("open")) renderDjProfileBody(getDj(djId));
+  // Je nachdem, von wo aus die Bewertung gestartet wurde, die passende Ansicht neu rendern
+  if(document.getElementById("overlay-dj-detail").classList.contains("open")) openDjDetail(dj.id);
+  if(document.getElementById("overlay-dj-profile").classList.contains("open")) openDjProfile(dj.id);
   showToast("Danke für deine Bewertung! ⭐");
 }
 
 /* =======================================================================
    PRIVATE LOCATIONS (Nutzer-Rolle)
-
-   Bewusst ohne Backend-Anbindung: Das Backend kennt (noch) keine
-   Ressource für private Locations, daher bleiben sie Session-Zustand.
    ======================================================================= */
 function openLocationForm(){
   document.getElementById("loc-name").value = "";
@@ -3097,14 +2753,14 @@ function openSettingsOverlay(){
 function getCurrentAvatarEntity(){
   if(state.role === "user") return state.userAvatar;
   const dj = getDj(state.loggedInDjId);
-  return dj ? { color: dj.color, emoji: dj.avatarEmoji } : { color: "#444", emoji: null };
+  return { color: dj.color, emoji: dj.avatarEmoji };
 }
 
 function renderSettingsOverlay(){
   const isUser = state.role === "user";
   const dj = getDj(state.loggedInDjId);
-  const targetName = isUser ? state.userDisplayName : (dj ? dj.name : "–");
-  const targetBio = isUser ? state.userBio : (dj ? dj.bio : "");
+  const targetName = isUser ? state.userDisplayName : dj.name;
+  const targetBio = isUser ? state.userBio : dj.bio;
   const avatar = getCurrentAvatarEntity();
 
   document.getElementById("settings-body").innerHTML = `
@@ -3156,83 +2812,37 @@ function buildAvatarGallery(){
   });
 }
 
-async function selectAvatar(preset){
+function selectAvatar(preset){
   if(state.role === "user"){
-    // Die Partygänger-Demo-Persona lebt nur im Session-State (kein Backend-Datensatz)
     state.userAvatar = { color: preset.color, emoji: preset.emoji };
   } else {
-    // Avatar des eingeloggten DJs am Backend speichern
     const dj = getDj(state.loggedInDjId);
-    if(!dj) return;
-    try {
-      Object.assign(dj, await apiPatch(`/djs/${dj.id}`, { color: preset.color, avatarEmoji: preset.emoji }));
-    } catch(err){
-      showToast("Profilbild speichern fehlgeschlagen: " + err.message);
-      return;
-    }
+    dj.color = preset.color;
+    dj.avatarEmoji = preset.emoji;
   }
   renderSettingsOverlay();
   refreshAllAvatarDependentViews();
   showToast("Profilbild aktualisiert ✓");
 }
 
-// Name/Bio werden beim Tippen sofort lokal übernommen (Anzeige wie bisher)
-// und gebündelt per PATCH ans Backend geschickt (ein Request pro Tipp-Pause)
-let nameSaveTimer;
 function updateSettingsName(){
   const val = document.getElementById("settings-name").value;
   if(state.role === "user"){
-    // Anzeigename der Demo-Persona: nur Session-State, "Du" bleibt der
-    // stabile Schlüssel für Buchungen/Bewertungen am Backend
     state.userDisplayName = val || "Du";
-    refreshAllAvatarDependentViews();
-    return;
+  } else {
+    const dj = getDj(state.loggedInDjId);
+    const oldName = dj.name;
+    dj.name = val || oldName;
+    // Namensänderung in bestehenden Event-Lineups nachziehen, sonst brechen "Kommende Gigs" & Party-Karte
+    events.forEach(e => { e.lineup = e.lineup.map(n => n === oldName ? dj.name : n); });
   }
-  const dj = getDj(state.loggedInDjId);
-  if(!dj) return;
-  const oldName = dj.name;
-  dj.name = val || oldName;
-  // Namensänderung in bestehenden Event-Lineups nachziehen, sonst brechen "Kommende Gigs" & Party-Karte
-  events.forEach(e => { e.lineup = e.lineup.map(n => n === oldName ? dj.name : n); });
   refreshAllAvatarDependentViews();
-
-  // Wert beim Planen einfangen: refreshAllAvatarDependentViews() lädt die
-  // DJ-Liste neu und würde dj.name sonst vor dem PATCH mit dem alten
-  // Serverstand überschreiben
-  const nameToSave = dj.name;
-  clearTimeout(nameSaveTimer);
-  nameSaveTimer = setTimeout(async () => {
-    try {
-      Object.assign(dj, await apiPatch(`/djs/${dj.id}`, { name: nameToSave }));
-      // Die API liefert Lineups über die DJ-IDs, daher Events frisch laden
-      await loadEvents();
-      renderMap();
-      renderTonightList();
-      renderSelfGigs();
-    } catch(err){
-      showToast("Name speichern fehlgeschlagen: " + err.message);
-    }
-  }, 500);
 }
 
-let bioSaveTimer;
 function updateSettingsBio(){
   const val = document.getElementById("settings-bio").value;
-  if(state.role === "user"){ state.userBio = val; return; }
-  const dj = getDj(state.loggedInDjId);
-  if(!dj) return;
-  dj.bio = val;
-
-  // Wert beim Planen einfangen (siehe Kommentar in updateSettingsName)
-  const bioToSave = dj.bio;
-  clearTimeout(bioSaveTimer);
-  bioSaveTimer = setTimeout(async () => {
-    try {
-      Object.assign(dj, await apiPatch(`/djs/${dj.id}`, { bio: bioToSave }));
-    } catch(err){
-      showToast("Bio speichern fehlgeschlagen: " + err.message);
-    }
-  }, 500);
+  if(state.role === "user"){ state.userBio = val; }
+  else { getDj(state.loggedInDjId).bio = val; }
 }
 
 function setNotifications(enabled){
@@ -3259,9 +2869,6 @@ function refreshAllAvatarDependentViews(){
 
 /* =======================================================================
    STORIES (wie Instagram, 24 Std. simuliert aktiv)
-
-   Bewusst ohne Backend-Anbindung: Das Backend kennt (noch) keine
-   Story-Ressource, daher bleiben Stories Session-Zustand.
    ======================================================================= */
 function getActiveStories(djId){
   return (storiesByDj[djId] || []).filter(s => s.hoursAgo < 24).sort((a, b) => b.hoursAgo - a.hoursAgo);
@@ -3405,8 +3012,7 @@ function showToast(msg){
   toastTimer = setTimeout(() => toast.classList.remove("show"), 2200);
 }
 
-// App starten; unerwartete Fehler beim Initialisieren sichtbar machen
-init().catch(err => showToast("Fehler beim Start: " + err.message));
+init();
 </script>
 </body>
 </html>
